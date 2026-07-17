@@ -8,10 +8,12 @@ export function Discover() {
   const [movies, setMovies] = useState<TMDBMovie[]>([]);
   const [shows, setShows] = useState<TMDBShow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([tmdb.trendingMovies(), tmdb.trendingShows()])
       .then(([m, s]) => { setMovies(m.results.slice(0, 12)); setShows(s.results.slice(0, 12)); })
+      .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -22,6 +24,11 @@ export function Discover() {
         <SearchBar />
       </div>
 
+      {error && (
+        <p className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
+          TMDB error: {error}. Check your API key in <code>.env</code> and restart the dev server.
+        </p>
+      )}
       {loading ? (
         <p className="text-gray-400">Loading…</p>
       ) : (

@@ -12,10 +12,12 @@ export function SearchPage() {
   const query = params.get('q') ?? '';
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!query) return;
     setLoading(true);
+    setError(null);
     tmdb.searchMulti(query)
       .then((data) => {
         const filtered = (data.results as unknown as Result[]).filter(
@@ -23,6 +25,7 @@ export function SearchPage() {
         );
         setResults(filtered);
       })
+      .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [query]);
 
