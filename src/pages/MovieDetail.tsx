@@ -1,0 +1,110 @@
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Eye, EyeOff, Bookmark, BookmarkCheck, Star, Clock } from 'lucide-react';
+import { tmdb, posterUrl } from '../lib/tmdb';
+import { useStore } from '../store';
+
+export function MovieDetail() {
+  const { id } = useParams<{ id: string }>();
+  const movieId = Number(id);
+  const [detail, setDetail] = useState<Awaited<ReturnType<typeof tmdb.movie>> | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const { movies, logMovie, removeMovieWatch, isInWatchlist, addToWatchlist, removeFromWatchlist } = useStore();
+  const tracked = movies[movieId];
+  const inList = isInWatchlist(movieId, 'movie');
+
+  useEffect(() => {
+    tmdb.movie(movieId).then(setDetail).finally(() => setLoading(false));
+  }, [movieId]);
+
+  if (loading) return <div className="text-gray-400 p-8">Loading…</div>;
+  if (!detail) return <div className="text-gray-400 p-8">Not found</div>;
+
+  const img = posterUrl(detail.poster_path, 'w500');
+
+  const handleWatch = () => {
+    logMovie({
+      id: detail.id,
+      title: detail.title,
+      poster_path: detail.poster_path,
+      release_date: detail.release_date,
+      runtime: detail.runtime,
+      watchCount: 0,
+      lastWatched: '',
+    });
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex gap-8">
+        <div className="w-48 shrink-0">
+          {img ? (
+            <img src={img} alt={detail.title} className="rounded-xl w-full shadow-lg" />
+          ) : (
+            <div className="aspect-[2/3] bg-gray-800 rounded-xl" />
+          )}
+        </div>
+
+        <div className="flex-1 space-y-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">{detail.title}</h1>
+            <div className="flex items-center gap-4 mt-2 text-gray-400 text-sm">
+              <span>{detail.release_date?.slice(0, 4)}</span>
+              {detail.runtime && (
+                <span className="flex items-center gap-1">
+                  <Clock size={13} /> {detail.runtime} min
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-yellow-400">
+                <Star size={13} fill="currentColor" /> {detail.vote_average.toFixed(1)}
+              </span>
+            </div>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {detail.genres.map((g) => (
+                <span key={g.id} className="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">{g.name}</span>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-gray-300 text-sm leading-relaxed max-w-2xl">{detail.overview}</p>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleWatch}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+            >
+              <Eye size={15} /> Mark as Watched
+            </button>
+            {tracked && tracked.watchCount > 0 && (
+              <button
+                onClick={() => removeMovieWatch(movieId)}
+                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition"
+              >
+                <EyeOff size={15} /> Unwatch
+              </button>
+            )}
+            <button
+              onClick={() => inList ? removeFromWatchlist(movieId, 'movie') : addToWatchlist(movieId, 'movie')}
+              className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition"
+            >
+              {inList ? <><BookmarkCheck size={15} className="text-purple-400" /> In Watchlist</> : <><Bookmark size={15} /> Add to Watchlist</>}
+            </button>
+          </div>
+
+          {tracked && tracked.watchCount > 0 && (
+            <div className="bg-gray-800 rounded-xl p-4 inline-block">
+              <p className="text-gray-400 text-sm">
+                Watched <span className="text-purple-400 font-semibold text-lg">{tracked.watchCount}×</span>
+                {' '}· Last watched {new Date(tracked.lastWatched).toLocaleDateString()}
+                {detail.runtime && (
+                  <span className="ml-2 text-gray-500">({Math.round(tracked.watchCount * detail.runtime / 60)}h total)</span>
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
