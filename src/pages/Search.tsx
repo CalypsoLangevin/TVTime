@@ -35,6 +35,11 @@ export function SearchPage() {
         <h1 className="text-2xl font-bold text-white mb-3">Search</h1>
         <SearchBar />
       </div>
+      {error && (
+        <p className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
+          TMDB error: {error}
+        </p>
+      )}
       {query && (
         <p className="text-gray-400 text-sm">
           {loading ? 'Searching…' : `${results.length} results for "${query}"`}
