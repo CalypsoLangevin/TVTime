@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Tv, Film, Bookmark, BarChart3, Search } from 'lucide-react';
+import { Tv, Film, Bookmark, BarChart3, Search, Upload } from 'lucide-react';
 
 const links = [
   { to: '/', label: 'Discover', icon: Search },
@@ -7,6 +7,10 @@ const links = [
   { to: '/shows', label: 'Shows', icon: Tv },
   { to: '/watchlist', label: 'Watchlist', icon: Bookmark },
   { to: '/stats', label: 'Stats', icon: BarChart3 },
+];
+
+const desktopExtra = [
+  { to: '/import', label: 'Import', icon: Upload },
 ];
 
 export function Navbar() {
@@ -29,6 +33,21 @@ export function Navbar() {
                 isActive(to)
                   ? 'bg-brand/15 text-brand'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icon size={14} />
+              {label}
+            </Link>
+          ))}
+          <div className="flex-1" />
+          {desktopExtra.map(({ to, label, icon: Icon }) => (
+            <Link
+              key={to}
+              to={to}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive(to)
+                  ? 'bg-brand/15 text-brand'
+                  : 'text-zinc-500 hover:text-white hover:bg-white/5'
               }`}
             >
               <Icon size={14} />

@@ -8,6 +8,7 @@ import { Shows } from './pages/Shows';
 import { ShowDetail } from './pages/ShowDetail';
 import { Watchlist } from './pages/Watchlist';
 import { Stats } from './pages/Stats';
+import { Import } from './pages/Import';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/tv/:id" element={<ShowDetail />} />
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/import" element={<Import />} />
         </Routes>
       </div>
     </BrowserRouter>
