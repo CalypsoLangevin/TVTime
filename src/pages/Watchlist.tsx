@@ -25,16 +25,16 @@ export function Watchlist() {
 
   if (!watchlist.length) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-16 text-center">
-        <p className="text-gray-400 text-lg">Your watchlist is empty.</p>
-        <p className="text-gray-500 text-sm mt-1">Add movies & shows with the bookmark icon.</p>
+      <div className="max-w-6xl mx-auto px-4 py-16 text-center space-y-2">
+        <p className="text-zinc-300 text-lg font-medium">Your watchlist is empty</p>
+        <p className="text-zinc-500 text-sm">Tap the bookmark icon on any movie or show to save it.</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold text-white mb-4">Watchlist</h1>
+      <h1 className="text-2xl font-bold text-white tracking-tight mb-4">Watchlist</h1>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
         {items.map((item) => {
           const isMovie = item.type === 'movie';

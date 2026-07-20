@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+@theme {
+  --color-cinema-bg: #0e0e10;
+  --color-cinema-surface: #18181b;
+  --color-cinema-card: #1f1f23;
+  --color-cinema-border: #2a2a2f;
+  --color-cinema-muted: #71717a;
+  --color-cinema-text: #e4e4e7;
+  --color-gold: #f59e0b;
+  --color-gold-light: #fbbf24;
+  --color-gold-dim: #92400e;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #0e0e10;
+  color: #e4e4e7;
+}

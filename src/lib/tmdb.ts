@@ -8,6 +8,11 @@ export function posterUrl(path: string | null, size: 'w185' | 'w342' | 'w500' = 
   return `${IMG_BASE}/${size}${path}`;
 }
 
+export function backdropUrl(path: string | null) {
+  if (!path) return null;
+  return `${IMG_BASE}/w1280${path}`;
+}
+
 async function get<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const url = new URL(`${BASE}${path}`);
   url.searchParams.set('api_key', KEY);
@@ -28,7 +33,7 @@ export const tmdb = {
     get<{ results: unknown[] }>('/search/tv', { query }),
 
   movie: (id: number) =>
-    get<{ id: number; title: string; poster_path: string | null; release_date: string; overview: string; runtime: number | null; vote_average: number; genres: { id: number; name: string }[] }>(`/movie/${id}`),
+    get<{ id: number; title: string; poster_path: string | null; backdrop_path: string | null; release_date: string; overview: string; runtime: number | null; vote_average: number; genres: { id: number; name: string }[] }>(`/movie/${id}`),
 
   show: (id: number) =>
     get<import('../types').TMDBShowDetails>(`/tv/${id}`),

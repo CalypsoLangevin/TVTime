@@ -19,18 +19,23 @@ export function Discover() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
-      <div className="flex flex-col gap-3">
-        <h1 className="text-2xl font-bold text-white">Discover</h1>
+      <div className="space-y-3">
+        <h1 className="text-2xl font-bold text-white tracking-tight">Discover</h1>
         <SearchBar />
       </div>
 
       {error && (
-        <p className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
-          TMDB error: {error}. Check your API key in <code>.env</code> and restart the dev server.
+        <p className="text-red-400 text-sm bg-red-900/20 border border-red-800/50 rounded-xl px-4 py-3">
+          TMDB error: {error}
         </p>
       )}
+
       {loading ? (
-        <p className="text-gray-400">Loading…</p>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] bg-zinc-800 rounded-xl animate-pulse" />
+          ))}
+        </div>
       ) : (
         <>
           <Section title="Trending Movies">
@@ -52,7 +57,7 @@ export function Discover() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-lg font-semibold text-white mb-3">{title}</h2>
+      <h2 className="text-base font-semibold text-zinc-300 uppercase tracking-widest mb-3">{title}</h2>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">{children}</div>
     </section>
   );

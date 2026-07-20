@@ -32,32 +32,40 @@ export function SearchPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-3">Search</h1>
+        <h1 className="text-2xl font-bold text-white tracking-tight mb-3">Search</h1>
         <SearchBar />
       </div>
       {error && (
-        <p className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
+        <p className="text-red-400 text-sm bg-red-900/20 border border-red-800/50 rounded-xl px-4 py-3">
           TMDB error: {error}
         </p>
       )}
       {query && (
-        <p className="text-gray-400 text-sm">
+        <p className="text-zinc-500 text-sm">
           {loading ? 'Searching…' : `${results.length} results for "${query}"`}
         </p>
       )}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-        {results.map((r) => (
-          <MediaCard
-            key={`${r.media_type}-${r.id}`}
-            id={r.id}
-            type={r.media_type}
-            title={r.media_type === 'movie' ? (r as TMDBMovie).title : (r as TMDBShow).name}
-            poster_path={r.poster_path}
-            year={r.media_type === 'movie' ? (r as TMDBMovie).release_date : (r as TMDBShow).first_air_date}
-            rating={r.vote_average}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] bg-zinc-800 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          {results.map((r) => (
+            <MediaCard
+              key={`${r.media_type}-${r.id}`}
+              id={r.id}
+              type={r.media_type}
+              title={r.media_type === 'movie' ? (r as TMDBMovie).title : (r as TMDBShow).name}
+              poster_path={r.poster_path}
+              year={r.media_type === 'movie' ? (r as TMDBMovie).release_date : (r as TMDBShow).first_air_date}
+              rating={r.vote_average}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Eye, Bookmark, BookmarkCheck, Star, Clock, Check, X } from 'lucide-react';
-import { tmdb, posterUrl } from '../lib/tmdb';
+import { tmdb, posterUrl, backdropUrl } from '../lib/tmdb';
 import { useStore } from '../store';
 
 function todayStr() {
@@ -24,10 +24,17 @@ export function MovieDetail() {
     tmdb.movie(movieId).then(setDetail).finally(() => setLoading(false));
   }, [movieId]);
 
-  if (loading) return <div className="text-gray-400 p-8">Loading…</div>;
-  if (!detail) return <div className="text-gray-400 p-8">Not found</div>;
+  if (loading) return (
+    <div className="animate-pulse space-y-4 p-6">
+      <div className="h-64 bg-zinc-800 rounded-xl" />
+      <div className="h-6 bg-zinc-800 rounded w-1/2" />
+      <div className="h-4 bg-zinc-800 rounded w-full" />
+    </div>
+  );
+  if (!detail) return <div className="text-zinc-400 p-8">Not found</div>;
 
-  const img = posterUrl(detail.poster_path, 'w500');
+  const poster = posterUrl(detail.poster_path, 'w500');
+  const backdrop = backdropUrl(detail.backdrop_path);
 
   const confirmWatch = () => {
     logMovie(
@@ -39,104 +46,117 @@ export function MovieDetail() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
-      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
-        <div className="w-32 sm:w-48 shrink-0 mx-auto sm:mx-0">
-          {img ? (
-            <img src={img} alt={detail.title} className="rounded-xl w-full shadow-lg" />
-          ) : (
-            <div className="aspect-[2/3] bg-gray-800 rounded-xl" />
-          )}
-        </div>
+    <div>
+      {/* Hero backdrop */}
+      <div className="relative h-56 sm:h-80 overflow-hidden">
+        {backdrop
+          ? <img src={backdrop} alt="" className="w-full h-full object-cover object-top" />
+          : <div className="w-full h-full bg-zinc-800" />
+        }
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e10] via-[#0e0e10]/60 to-transparent" />
+      </div>
 
-        <div className="flex-1 space-y-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white text-center sm:text-left">{detail.title}</h1>
-            <div className="flex items-center justify-center sm:justify-start gap-4 mt-2 text-gray-400 text-sm">
-              <span>{detail.release_date?.slice(0, 4)}</span>
-              {detail.runtime && (
-                <span className="flex items-center gap-1">
-                  <Clock size={13} /> {detail.runtime} min
-                </span>
-              )}
-              <span className="flex items-center gap-1 text-yellow-400">
-                <Star size={13} fill="currentColor" /> {detail.vote_average.toFixed(1)}
-              </span>
-            </div>
-            <div className="flex gap-2 mt-2 flex-wrap justify-center sm:justify-start">
-              {detail.genres.map((g) => (
-                <span key={g.id} className="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">{g.name}</span>
-              ))}
-            </div>
+      <div className="max-w-6xl mx-auto px-4 -mt-24 sm:-mt-32 relative z-10 pb-8">
+        <div className="flex flex-col sm:flex-row gap-5 sm:gap-8">
+          {/* Poster */}
+          <div className="w-28 sm:w-44 shrink-0 mx-auto sm:mx-0 shadow-2xl rounded-xl overflow-hidden ring-2 ring-white/5">
+            {poster
+              ? <img src={poster} alt={detail.title} className="w-full" />
+              : <div className="aspect-[2/3] bg-zinc-700" />
+            }
           </div>
 
-          <p className="text-gray-300 text-sm leading-relaxed max-w-2xl">{detail.overview}</p>
+          {/* Info */}
+          <div className="flex-1 space-y-4 pt-0 sm:pt-16">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight text-center sm:text-left">{detail.title}</h1>
+              <div className="flex items-center justify-center sm:justify-start gap-4 mt-2 text-zinc-400 text-sm flex-wrap">
+                <span>{detail.release_date?.slice(0, 4)}</span>
+                {detail.runtime && (
+                  <span className="flex items-center gap-1">
+                    <Clock size={12} /> {detail.runtime} min
+                  </span>
+                )}
+                <span className="flex items-center gap-1 text-amber-400">
+                  <Star size={12} fill="currentColor" /> {detail.vote_average.toFixed(1)}
+                </span>
+              </div>
+              <div className="flex gap-2 mt-2 flex-wrap justify-center sm:justify-start">
+                {detail.genres.map((g) => (
+                  <span key={g.id} className="bg-zinc-800 border border-white/5 text-zinc-300 text-xs px-2.5 py-0.5 rounded-full">{g.name}</span>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            {tracked && tracked.watchCount > 0 ? (
-              <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-1 py-1">
-                <button
-                  onClick={() => removeMovieWatch(movieId)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-700 hover:bg-gray-600 text-white text-lg font-bold transition"
-                  title="Remove one watch"
-                >
-                  −
-                </button>
-                <span className="text-white font-semibold px-2 min-w-[2rem] text-center">{tracked.watchCount}×</span>
+            <p className="text-zinc-400 text-sm leading-relaxed max-w-2xl">{detail.overview}</p>
+
+            {/* Watch controls */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {tracked && tracked.watchCount > 0 ? (
+                <div className="flex items-center gap-1 bg-zinc-800 border border-white/5 rounded-xl p-1">
+                  <button
+                    onClick={() => removeMovieWatch(movieId)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xl font-light transition"
+                    title="Remove one watch"
+                  >−</button>
+                  <span className="text-amber-400 font-bold px-3 min-w-[3rem] text-center">{tracked.watchCount}×</span>
+                  <button
+                    onClick={() => setPickingDate(true)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xl font-light transition"
+                    title="Add one watch"
+                  >+</button>
+                </div>
+              ) : (
                 <button
                   onClick={() => setPickingDate(true)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold transition"
-                  title="Add one watch"
+                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg shadow-amber-500/20"
                 >
-                  +
+                  <Eye size={15} /> Mark as Watched
+                </button>
+              )}
+              <button
+                onClick={() => inList ? removeFromWatchlist(movieId, 'movie') : addToWatchlist(movieId, 'movie')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition ${
+                  inList
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                    : 'bg-zinc-800 border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-700'
+                }`}
+              >
+                {inList ? <><BookmarkCheck size={15} /> In Watchlist</> : <><Bookmark size={15} /> Watchlist</>}
+              </button>
+            </div>
+
+            {/* Date picker */}
+            {pickingDate && (
+              <div className="flex items-center gap-3 bg-zinc-800 border border-white/5 rounded-xl px-4 py-3 w-fit flex-wrap">
+                <span className="text-zinc-400 text-sm">Watched on</span>
+                <input
+                  type="date"
+                  value={watchDate}
+                  max={todayStr()}
+                  onChange={(e) => setWatchDate(e.target.value)}
+                  className="bg-zinc-700 text-white text-sm px-3 py-1.5 rounded-lg border border-white/5 focus:border-amber-500/50 focus:outline-none"
+                />
+                <button onClick={confirmWatch} className="p-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition" title="Confirm">
+                  <Check size={14} />
+                </button>
+                <button onClick={() => setPickingDate(false)} className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white transition" title="Cancel">
+                  <X size={14} />
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={() => setPickingDate(true)}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-              >
-                <Eye size={15} /> Mark as Watched
-              </button>
             )}
-            <button
-              onClick={() => inList ? removeFromWatchlist(movieId, 'movie') : addToWatchlist(movieId, 'movie')}
-              className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition"
-            >
-              {inList ? <><BookmarkCheck size={15} className="text-purple-400" /> In Watchlist</> : <><Bookmark size={15} /> Add to Watchlist</>}
-            </button>
-          </div>
 
-          {pickingDate && (
-            <div className="flex items-center gap-3 bg-gray-800 rounded-xl px-4 py-3 w-fit">
-              <span className="text-gray-400 text-sm">Watched on</span>
-              <input
-                type="date"
-                value={watchDate}
-                max={todayStr()}
-                onChange={(e) => setWatchDate(e.target.value)}
-                className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
-              />
-              <button onClick={confirmWatch} className="p-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition" title="Confirm">
-                <Check size={14} />
-              </button>
-              <button onClick={() => setPickingDate(false)} className="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition" title="Cancel">
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
-          {tracked && tracked.watchCount > 0 && (
-            <div className="bg-gray-800 rounded-xl p-4 inline-block">
-              <p className="text-gray-400 text-sm">
-                Watched <span className="text-purple-400 font-semibold text-lg">{tracked.watchCount}×</span>
-                {' '}· Last watched {new Date(tracked.lastWatched).toLocaleDateString()}
+            {/* Watch stats */}
+            {tracked && tracked.watchCount > 0 && (
+              <div className="bg-zinc-800/60 border border-white/5 rounded-xl p-4 inline-flex items-center gap-3 flex-wrap">
+                <span className="text-zinc-400 text-sm">Last watched</span>
+                <span className="text-white text-sm">{new Date(tracked.lastWatched).toLocaleDateString()}</span>
                 {detail.runtime && (
-                  <span className="ml-2 text-gray-500">({Math.round(tracked.watchCount * detail.runtime / 60)}h total)</span>
+                  <span className="text-zinc-500 text-sm">· {Math.round(tracked.watchCount * detail.runtime / 60)}h total</span>
                 )}
-              </p>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

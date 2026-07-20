@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Eye, EyeOff, Bookmark, BookmarkCheck, Star, CheckCheck } from 'lucide-react';
-import { tmdb, posterUrl } from '../lib/tmdb';
+import { tmdb, posterUrl, backdropUrl } from '../lib/tmdb';
 import { useStore } from '../store';
 import type { TMDBEpisode, TMDBShowDetails } from '../types';
 
@@ -46,14 +46,20 @@ export function ShowDetail() {
     });
   };
 
-  if (loading) return <div className="text-gray-400 p-8">Loading…</div>;
-  if (!detail) return <div className="text-gray-400 p-8">Not found</div>;
+  if (loading) return (
+    <div className="animate-pulse space-y-4 p-6">
+      <div className="h-64 bg-zinc-800 rounded-xl" />
+      <div className="h-6 bg-zinc-800 rounded w-1/2" />
+    </div>
+  );
+  if (!detail) return <div className="text-zinc-400 p-8">Not found</div>;
 
-  const img = posterUrl(detail.poster_path, 'w500');
+  const poster = posterUrl(detail.poster_path, 'w500');
+  const backdrop = backdropUrl(detail.backdrop_path ?? null);
   const watchedCount = tracked?.watchedEpisodes.length ?? 0;
   const totalEps = detail.seasons.reduce((acc, s) => acc + (s.season_number > 0 ? s.episode_count : 0), 0);
 
-  const statuses: Array<{ value: typeof tracked['status']; label: string }> = [
+  const statuses: Array<{ value: TrackedShowStatus; label: string }> = [
     { value: 'watching', label: 'Watching' },
     { value: 'completed', label: 'Completed' },
     { value: 'paused', label: 'Paused' },
@@ -61,107 +67,146 @@ export function ShowDetail() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
-        <div className="w-32 sm:w-40 shrink-0 mx-auto sm:mx-0">
-          {img ? <img src={img} alt={detail.name} className="rounded-xl w-full shadow-lg" /> : <div className="aspect-[2/3] bg-gray-800 rounded-xl" />}
-        </div>
-        <div className="flex-1 space-y-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white text-center sm:text-left">{detail.name}</h1>
-            <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-gray-400 text-sm">
-              <span>{detail.first_air_date?.slice(0, 4)}</span>
-              <span>{detail.number_of_seasons} seasons</span>
-              <span className="flex items-center gap-1 text-yellow-400">
-                <Star size={13} fill="currentColor" /> {detail.vote_average.toFixed(1)}
-              </span>
-            </div>
-          </div>
-          <p className="text-gray-300 text-sm leading-relaxed max-w-2xl">{detail.overview}</p>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {statuses.map((s) => (
-              <button
-                key={s.value}
-                onClick={() => setShowStatus(showId, s.value)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${tracked?.status === s.value ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-              >
-                {s.label}
-              </button>
-            ))}
-            <button
-              onClick={() => inList ? removeFromWatchlist(showId, 'tv') : addToWatchlist(showId, 'tv')}
-              className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm transition"
-            >
-              {inList ? <><BookmarkCheck size={14} className="text-purple-400" /> In Watchlist</> : <><Bookmark size={14} /> Watchlist</>}
-            </button>
-          </div>
-
-          {watchedCount > 0 && (
-            <div className="bg-gray-800 rounded-xl p-3 inline-flex items-center gap-4 text-sm">
-              <span className="text-gray-400">{watchedCount} / {totalEps} episodes</span>
-              <div className="w-32 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, (watchedCount / totalEps) * 100)}%` }} />
-              </div>
-            </div>
-          )}
-        </div>
+    <div>
+      {/* Hero backdrop */}
+      <div className="relative h-56 sm:h-80 overflow-hidden">
+        {backdrop
+          ? <img src={backdrop} alt="" className="w-full h-full object-cover object-top" />
+          : <div className="w-full h-full bg-zinc-800" />
+        }
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e10] via-[#0e0e10]/60 to-transparent" />
       </div>
 
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-white">Seasons</h2>
-        {detail.seasons.filter((s) => s.season_number > 0).map((season) => {
-          const open = openSeason === season.season_number;
-          const eps = episodes[season.season_number] ?? [];
-          const watchedInSeason = eps.filter((e) => hasWatchedEpisode(showId, season.season_number, e.episode_number)).length;
-          const allWatched = eps.length > 0 && watchedInSeason === eps.length;
+      <div className="max-w-6xl mx-auto px-4 -mt-24 sm:-mt-32 relative z-10 pb-8 space-y-6">
+        <div className="flex flex-col sm:flex-row gap-5 sm:gap-8">
+          {/* Poster */}
+          <div className="w-28 sm:w-40 shrink-0 mx-auto sm:mx-0 shadow-2xl rounded-xl overflow-hidden ring-2 ring-white/5">
+            {poster
+              ? <img src={poster} alt={detail.name} className="w-full" />
+              : <div className="aspect-[2/3] bg-zinc-700" />
+            }
+          </div>
 
-          return (
-            <div key={season.id} className="bg-gray-800 rounded-xl overflow-hidden">
-              <button
-                onClick={() => loadSeason(season.season_number)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-750 text-left"
-              >
-                <span className="text-white font-medium">{season.name}</span>
-                <div className="flex items-center gap-3 text-sm text-gray-400">
-                  <span>{watchedInSeason > 0 ? `${watchedInSeason}/` : ''}{season.episode_count} episodes</span>
-                  {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-              </button>
-
-              {open && eps.length > 0 && (
-                <div className="border-t border-gray-700">
-                  <div className="px-4 py-2 flex justify-end">
-                    <button
-                      onClick={() => markSeasonAll(season.season_number, eps, !allWatched)}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition"
-                    >
-                      <CheckCheck size={13} /> {allWatched ? 'Unmark all' : 'Mark all watched'}
-                    </button>
-                  </div>
-                  {eps.map((ep) => {
-                    const watched = hasWatchedEpisode(showId, season.season_number, ep.episode_number);
-                    return (
-                      <div key={ep.id} className="flex items-center gap-3 px-4 py-2.5 border-t border-gray-700/50 hover:bg-gray-700/30">
-                        <span className="text-gray-500 text-xs w-6 shrink-0">{ep.episode_number}</span>
-                        <span className={`flex-1 text-sm ${watched ? 'text-white' : 'text-gray-400'}`}>{ep.name}</span>
-                        {ep.air_date && <span className="hidden sm:inline text-gray-500 text-xs">{ep.air_date?.slice(0, 10)}</span>}
-                        {ep.runtime && <span className="text-gray-500 text-xs">{ep.runtime}m</span>}
-                        <button
-                          onClick={() => watched ? unlogEpisode(showId, season.season_number, ep.episode_number) : logEpisode(showId, { seasonNumber: season.season_number, episodeNumber: ep.episode_number })}
-                          className={`p-1.5 rounded-full transition ${watched ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'}`}
-                        >
-                          {watched ? <Eye size={13} /> : <EyeOff size={13} />}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+          {/* Info */}
+          <div className="flex-1 space-y-4 pt-0 sm:pt-16">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight text-center sm:text-left">{detail.name}</h1>
+              <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-zinc-400 text-sm flex-wrap">
+                <span>{detail.first_air_date?.slice(0, 4)}</span>
+                <span>{detail.number_of_seasons} seasons</span>
+                <span className="flex items-center gap-1 text-amber-400">
+                  <Star size={12} fill="currentColor" /> {detail.vote_average.toFixed(1)}
+                </span>
+              </div>
             </div>
-          );
-        })}
+
+            <p className="text-zinc-400 text-sm leading-relaxed max-w-2xl">{detail.overview}</p>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {statuses.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => setShowStatus(showId, s.value)}
+                  className={`px-3.5 py-1.5 rounded-xl text-sm font-medium border transition ${
+                    tracked?.status === s.value
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                      : 'bg-zinc-800 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-700'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+              <button
+                onClick={() => inList ? removeFromWatchlist(showId, 'tv') : addToWatchlist(showId, 'tv')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-medium border transition ${
+                  inList
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                    : 'bg-zinc-800 border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-700'
+                }`}
+              >
+                {inList ? <><BookmarkCheck size={13} /> In Watchlist</> : <><Bookmark size={13} /> Watchlist</>}
+              </button>
+            </div>
+
+            {watchedCount > 0 && (
+              <div className="flex items-center gap-3 bg-zinc-800/60 border border-white/5 rounded-xl px-4 py-2.5 w-fit text-sm">
+                <span className="text-zinc-400">{watchedCount} / {totalEps} episodes</span>
+                <div className="w-28 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, (watchedCount / totalEps) * 100)}%` }} />
+                </div>
+                <span className="text-amber-400 font-medium">{Math.round((watchedCount / totalEps) * 100)}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Seasons */}
+        <div className="space-y-2">
+          <h2 className="text-base font-semibold text-zinc-300 uppercase tracking-widest">Seasons</h2>
+          {detail.seasons.filter((s) => s.season_number > 0).map((season) => {
+            const open = openSeason === season.season_number;
+            const eps = episodes[season.season_number] ?? [];
+            const watchedInSeason = eps.filter((e) => hasWatchedEpisode(showId, season.season_number, e.episode_number)).length;
+            const allWatched = eps.length > 0 && watchedInSeason === eps.length;
+
+            return (
+              <div key={season.id} className="bg-zinc-800/60 border border-white/5 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => loadSeason(season.season_number)}
+                  className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/5 transition text-left"
+                >
+                  <span className="text-white font-medium">{season.name}</span>
+                  <div className="flex items-center gap-3 text-sm text-zinc-400">
+                    {watchedInSeason > 0 && (
+                      <span className="text-amber-400 text-xs font-medium">{watchedInSeason}/{season.episode_count}</span>
+                    )}
+                    <span className="text-xs">{season.episode_count} ep</span>
+                    {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                  </div>
+                </button>
+
+                {open && eps.length > 0 && (
+                  <div className="border-t border-white/5">
+                    <div className="px-4 py-2 flex justify-end border-b border-white/5">
+                      <button
+                        onClick={() => markSeasonAll(season.season_number, eps, !allWatched)}
+                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-amber-400 transition"
+                      >
+                        <CheckCheck size={13} /> {allWatched ? 'Unmark all' : 'Mark all watched'}
+                      </button>
+                    </div>
+                    {eps.map((ep) => {
+                      const watched = hasWatchedEpisode(showId, season.season_number, ep.episode_number);
+                      return (
+                        <div key={ep.id} className="flex items-center gap-3 px-4 py-3 border-t border-white/5 hover:bg-white/3 transition">
+                          <span className="text-zinc-600 text-xs w-5 shrink-0 text-right">{ep.episode_number}</span>
+                          <span className={`flex-1 text-sm ${watched ? 'text-white' : 'text-zinc-400'}`}>{ep.name}</span>
+                          {ep.air_date && <span className="hidden sm:inline text-zinc-600 text-xs">{ep.air_date?.slice(0, 10)}</span>}
+                          {ep.runtime && <span className="text-zinc-600 text-xs">{ep.runtime}m</span>}
+                          <button
+                            onClick={() => watched
+                              ? unlogEpisode(showId, season.season_number, ep.episode_number)
+                              : logEpisode(showId, { seasonNumber: season.season_number, episodeNumber: ep.episode_number })}
+                            className={`p-1.5 rounded-full transition shrink-0 ${
+                              watched
+                                ? 'bg-amber-500 text-black'
+                                : 'bg-zinc-700 text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            {watched ? <Eye size={13} /> : <EyeOff size={13} />}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
+
+type TrackedShowStatus = 'watching' | 'completed' | 'paused' | 'dropped';

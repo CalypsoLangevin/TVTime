@@ -14,6 +14,7 @@ export interface TMDBShow {
   id: number;
   name: string;
   poster_path: string | null;
+  backdrop_path: string | null;
   first_air_date: string;
   overview: string;
   vote_average: number;

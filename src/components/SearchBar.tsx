@@ -7,7 +7,7 @@ export function SearchBar() {
   const navigate = useNavigate();
   const ref = useRef<HTMLInputElement>(null);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`);
   };
@@ -25,16 +25,16 @@ export function SearchBar() {
 
   return (
     <form onSubmit={submit} className="relative w-full max-w-xl">
-      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
       <input
         ref={ref}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder='Search movies & shows… (press "/" to focus)'
-        className="w-full bg-gray-800 text-white placeholder-gray-500 pl-9 pr-9 py-2.5 rounded-xl text-sm border border-gray-700 focus:border-purple-500 focus:outline-none"
+        placeholder='Search movies & shows…'
+        className="w-full bg-zinc-800/80 backdrop-blur-sm text-white placeholder-zinc-500 pl-10 pr-9 py-3 rounded-xl text-sm border border-white/5 focus:border-amber-500/50 focus:outline-none focus:bg-zinc-800 transition"
       />
       {query && (
-        <button type="button" onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+        <button type="button" onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
           <X size={14} />
         </button>
       )}
