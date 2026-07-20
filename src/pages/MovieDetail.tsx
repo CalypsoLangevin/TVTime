@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Eye, EyeOff, Bookmark, BookmarkCheck, Star, Clock } from 'lucide-react';
+import { Eye, Bookmark, BookmarkCheck, Star, Clock } from 'lucide-react';
 import { tmdb, posterUrl } from '../lib/tmdb';
 import { useStore } from '../store';
 
@@ -69,19 +69,31 @@ export function MovieDetail() {
 
           <p className="text-gray-300 text-sm leading-relaxed max-w-2xl">{detail.overview}</p>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleWatch}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-            >
-              <Eye size={15} /> Mark as Watched
-            </button>
-            {tracked && tracked.watchCount > 0 && (
+          <div className="flex items-center gap-3 flex-wrap">
+            {tracked && tracked.watchCount > 0 ? (
+              <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-1 py-1">
+                <button
+                  onClick={() => removeMovieWatch(movieId)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-700 hover:bg-gray-600 text-white text-lg font-bold transition"
+                  title="Remove one watch"
+                >
+                  −
+                </button>
+                <span className="text-white font-semibold px-2 min-w-[2rem] text-center">{tracked.watchCount}×</span>
+                <button
+                  onClick={handleWatch}
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold transition"
+                  title="Add one watch"
+                >
+                  +
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={() => removeMovieWatch(movieId)}
-                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition"
+                onClick={handleWatch}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
               >
-                <EyeOff size={15} /> Unwatch
+                <Eye size={15} /> Mark as Watched
               </button>
             )}
             <button
