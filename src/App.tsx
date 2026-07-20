@@ -11,7 +11,7 @@ import { Stats } from './pages/Stats';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/TVTime">
       <div className="min-h-screen bg-gray-950 text-white pb-16 sm:pb-0">
         <Navbar />
         <Routes>
