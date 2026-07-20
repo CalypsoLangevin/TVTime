@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Eye, EyeOff, Bookmark, BookmarkCheck, Star, CheckCheck } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Bookmark, BookmarkCheck, Heart, Star, CheckCheck } from 'lucide-react';
 import { tmdb, posterUrl, backdropUrl } from '../lib/tmdb';
 import { useStore } from '../store';
 import type { TMDBEpisode, TMDBShowDetails } from '../types';
@@ -13,9 +13,10 @@ export function ShowDetail() {
   const [openSeason, setOpenSeason] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { shows, addShow, setShowStatus, logEpisode, unlogEpisode, hasWatchedEpisode, isInWatchlist, addToWatchlist, removeFromWatchlist } = useStore();
+  const { shows, addShow, setShowStatus, logEpisode, unlogEpisode, hasWatchedEpisode, isInWatchlist, addToWatchlist, removeFromWatchlist, isInFavorites, addToFavorites, removeFromFavorites } = useStore();
   const tracked = shows[showId];
   const inList = isInWatchlist(showId, 'tv');
+  const inFavorites = isInFavorites(showId, 'tv');
 
   useEffect(() => {
     tmdb.show(showId).then((d) => {
@@ -125,6 +126,17 @@ export function ShowDetail() {
                 }`}
               >
                 {inList ? <><BookmarkCheck size={13} /> In Watchlist</> : <><Bookmark size={13} /> Watchlist</>}
+              </button>
+              <button
+                onClick={() => inFavorites ? removeFromFavorites(showId, 'tv') : addToFavorites(showId, 'tv')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-medium border transition ${
+                  inFavorites
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                    : 'bg-zinc-800 border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-700'
+                }`}
+              >
+                <Heart size={13} fill={inFavorites ? 'currentColor' : 'none'} />
+                {inFavorites ? 'Favorited' : 'Favorite'}
               </button>
             </div>
 

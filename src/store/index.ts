@@ -6,6 +6,7 @@ interface State {
   movies: Record<number, TrackedMovie>;
   shows: Record<number, TrackedShow>;
   watchlist: WatchlistEntry[];
+  favorites: WatchlistEntry[];
 
   logMovie: (movie: TrackedMovie, watchedAt?: string) => void;
   removeMovieWatch: (id: number) => void;
@@ -20,6 +21,10 @@ interface State {
   removeFromWatchlist: (id: number, type: MediaType) => void;
   isInWatchlist: (id: number, type: MediaType) => boolean;
 
+  addToFavorites: (id: number, type: MediaType) => void;
+  removeFromFavorites: (id: number, type: MediaType) => void;
+  isInFavorites: (id: number, type: MediaType) => boolean;
+
   hasWatchedEpisode: (showId: number, season: number, episode: number) => boolean;
   episodeWatchCount: (showId: number, season: number, episode: number) => number;
 }
@@ -30,6 +35,7 @@ export const useStore = create<State>()(
       movies: {},
       shows: {},
       watchlist: [],
+      favorites: [],
 
       logMovie: (movie, watchedAt?: string) =>
         set((s) => {
@@ -125,6 +131,20 @@ export const useStore = create<State>()(
 
       isInWatchlist: (id, type) =>
         get().watchlist.some((w) => w.mediaId === id && w.mediaType === type),
+
+      addToFavorites: (id, type) =>
+        set((s) => {
+          if (s.favorites.some((f) => f.mediaId === id && f.mediaType === type)) return s;
+          return { favorites: [...s.favorites, { mediaId: id, mediaType: type, addedAt: new Date().toISOString() }] };
+        }),
+
+      removeFromFavorites: (id, type) =>
+        set((s) => ({
+          favorites: s.favorites.filter((f) => !(f.mediaId === id && f.mediaType === type)),
+        })),
+
+      isInFavorites: (id, type) =>
+        get().favorites.some((f) => f.mediaId === id && f.mediaType === type),
 
       hasWatchedEpisode: (showId, season, episode) =>
         !!get().shows[showId]?.watchedEpisodes.some(

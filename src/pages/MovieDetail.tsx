@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Eye, Bookmark, BookmarkCheck, Star, Clock, Check, X } from 'lucide-react';
+import { Eye, Bookmark, BookmarkCheck, Heart, Star, Clock, Check, X } from 'lucide-react';
 import { tmdb, posterUrl, backdropUrl } from '../lib/tmdb';
 import { useStore } from '../store';
 
@@ -16,9 +16,10 @@ export function MovieDetail() {
   const [pickingDate, setPickingDate] = useState(false);
   const [watchDate, setWatchDate] = useState(todayStr());
 
-  const { movies, logMovie, removeMovieWatch, isInWatchlist, addToWatchlist, removeFromWatchlist } = useStore();
+  const { movies, logMovie, removeMovieWatch, isInWatchlist, addToWatchlist, removeFromWatchlist, isInFavorites, addToFavorites, removeFromFavorites } = useStore();
   const tracked = movies[movieId];
   const inList = isInWatchlist(movieId, 'movie');
+  const inFavorites = isInFavorites(movieId, 'movie');
 
   useEffect(() => {
     tmdb.movie(movieId).then(setDetail).finally(() => setLoading(false));
@@ -123,6 +124,17 @@ export function MovieDetail() {
                 }`}
               >
                 {inList ? <><BookmarkCheck size={15} /> In Watchlist</> : <><Bookmark size={15} /> Watchlist</>}
+              </button>
+              <button
+                onClick={() => inFavorites ? removeFromFavorites(movieId, 'movie') : addToFavorites(movieId, 'movie')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition ${
+                  inFavorites
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                    : 'bg-zinc-800 border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-700'
+                }`}
+              >
+                <Heart size={15} fill={inFavorites ? 'currentColor' : 'none'} />
+                {inFavorites ? 'Favorited' : 'Favorite'}
               </button>
             </div>
 

@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store';
+import { tmdb, posterUrl } from '../lib/tmdb';
+import { Link } from 'react-router-dom';
+import type { MediaType } from '../types';
 
 function minutesToTime(minutes: number) {
   const totalHours = Math.floor(minutes / 60);
@@ -75,9 +78,46 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
+type FavItem = { id: number; type: MediaType; title: string; poster_path: string | null; year: string };
+
+function FavoritesRow({ items }: { items: FavItem[] }) {
+  if (!items.length) return <p className="text-zinc-600 text-sm">No favorites yet</p>;
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-1">
+      {items.map((item) => {
+        const img = posterUrl(item.poster_path, 'w185');
+        return (
+          <Link key={`${item.type}-${item.id}`} to={`/${item.type}/${item.id}`} className="shrink-0 w-16 group">
+            <div className="w-16 aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 ring-1 ring-white/5 group-hover:ring-red-400/50 transition">
+              {img ? <img src={img} alt={item.title} className="w-full h-full object-cover" /> : null}
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Stats() {
   const [tab, setTab] = useState<'shows' | 'movies'>('shows');
-  const { movies, shows } = useStore();
+  const { movies, shows, favorites } = useStore();
+
+  const [favItems, setFavItems] = useState<FavItem[]>([]);
+  useEffect(() => {
+    Promise.all(
+      favorites.map(async (f) => {
+        try {
+          if (f.mediaType === 'movie') {
+            const d = await tmdb.movie(f.mediaId);
+            return { id: f.mediaId, type: f.mediaType as MediaType, title: d.title, poster_path: d.poster_path, year: d.release_date };
+          } else {
+            const d = await tmdb.show(f.mediaId);
+            return { id: f.mediaId, type: f.mediaType as MediaType, title: d.name, poster_path: d.poster_path, year: d.first_air_date };
+          }
+        } catch { return null; }
+      })
+    ).then(r => setFavItems(r.filter(Boolean) as FavItem[]));
+  }, [favorites]);
 
   const movieList = Object.values(movies);
   const showList = Object.values(shows);
@@ -183,6 +223,12 @@ export function Stats() {
 
       {tab === 'shows' && (
         <div className="space-y-4">
+          <SectionCard title="Favorite Shows">
+            <div className="mt-3">
+              <FavoritesRow items={favItems.filter(f => f.type === 'tv')} />
+            </div>
+          </SectionCard>
+
           {/* Episodes watched chart */}
           <SectionCard title="Episodes watched">
             <div className="mt-4">
@@ -226,6 +272,12 @@ export function Stats() {
 
       {tab === 'movies' && (
         <div className="space-y-4">
+          <SectionCard title="Favorite Movies">
+            <div className="mt-3">
+              <FavoritesRow items={favItems.filter(f => f.type === 'movie')} />
+            </div>
+          </SectionCard>
+
           {/* Movies watched chart */}
           <SectionCard title="Movies watched">
             <div className="mt-4">
