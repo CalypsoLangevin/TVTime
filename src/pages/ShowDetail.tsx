@@ -94,7 +94,7 @@ export function ShowDetail() {
               <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-zinc-400 text-sm flex-wrap">
                 <span>{detail.first_air_date?.slice(0, 4)}</span>
                 <span>{detail.number_of_seasons} seasons</span>
-                <span className="flex items-center gap-1 text-amber-400">
+                <span className="flex items-center gap-1 text-brand">
                   <Star size={12} fill="currentColor" /> {detail.vote_average.toFixed(1)}
                 </span>
               </div>
@@ -109,7 +109,7 @@ export function ShowDetail() {
                   onClick={() => setShowStatus(showId, s.value)}
                   className={`px-3.5 py-1.5 rounded-xl text-sm font-medium border transition ${
                     tracked?.status === s.value
-                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                      ? 'bg-brand/15 border-brand/30 text-brand'
                       : 'bg-zinc-800 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-700'
                   }`}
                 >
@@ -120,7 +120,7 @@ export function ShowDetail() {
                 onClick={() => inList ? removeFromWatchlist(showId, 'tv') : addToWatchlist(showId, 'tv')}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-medium border transition ${
                   inList
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                    ? 'bg-brand/10 border-brand/30 text-brand'
                     : 'bg-zinc-800 border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-700'
                 }`}
               >
@@ -132,9 +132,9 @@ export function ShowDetail() {
               <div className="flex items-center gap-3 bg-zinc-800/60 border border-white/5 rounded-xl px-4 py-2.5 w-fit text-sm">
                 <span className="text-zinc-400">{watchedCount} / {totalEps} episodes</span>
                 <div className="w-28 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, (watchedCount / totalEps) * 100)}%` }} />
+                  <div className="h-full bg-brand rounded-full" style={{ width: `${Math.min(100, (watchedCount / totalEps) * 100)}%` }} />
                 </div>
-                <span className="text-amber-400 font-medium">{Math.round((watchedCount / totalEps) * 100)}%</span>
+                <span className="text-brand font-medium">{Math.round((watchedCount / totalEps) * 100)}%</span>
               </div>
             )}
           </div>
@@ -158,7 +158,7 @@ export function ShowDetail() {
                   <span className="text-white font-medium">{season.name}</span>
                   <div className="flex items-center gap-3 text-sm text-zinc-400">
                     {watchedInSeason > 0 && (
-                      <span className="text-amber-400 text-xs font-medium">{watchedInSeason}/{season.episode_count}</span>
+                      <span className="text-brand text-xs font-medium">{watchedInSeason}/{season.episode_count}</span>
                     )}
                     <span className="text-xs">{season.episode_count} ep</span>
                     {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
@@ -170,7 +170,7 @@ export function ShowDetail() {
                     <div className="px-4 py-2 flex justify-end border-b border-white/5">
                       <button
                         onClick={() => markSeasonAll(season.season_number, eps, !allWatched)}
-                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-amber-400 transition"
+                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-brand transition"
                       >
                         <CheckCheck size={13} /> {allWatched ? 'Unmark all' : 'Mark all watched'}
                       </button>
@@ -189,7 +189,7 @@ export function ShowDetail() {
                               : logEpisode(showId, { seasonNumber: season.season_number, episodeNumber: ep.episode_number })}
                             className={`p-1.5 rounded-full transition shrink-0 ${
                               watched
-                                ? 'bg-amber-500 text-black'
+                                ? 'bg-brand text-black'
                                 : 'bg-zinc-700 text-zinc-400 hover:text-white'
                             }`}
                           >

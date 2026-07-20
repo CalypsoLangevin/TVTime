@@ -18,7 +18,7 @@ export function Navbar() {
       {/* Desktop top nav */}
       <nav className="hidden sm:block sticky top-0 z-50 bg-[#0e0e10]/80 backdrop-blur-md border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 flex items-center gap-1 h-14">
-          <Link to="/" className="font-bold text-lg mr-6 shrink-0 text-amber-400 tracking-wide">
+          <Link to="/" className="font-bold text-lg mr-6 shrink-0 text-brand tracking-wide">
             TVTime
           </Link>
           {links.map(({ to, label, icon: Icon }) => (
@@ -27,7 +27,7 @@ export function Navbar() {
               to={to}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive(to)
-                  ? 'bg-amber-500/15 text-amber-400'
+                  ? 'bg-brand/15 text-brand'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -46,7 +46,7 @@ export function Navbar() {
               key={to}
               to={to}
               className={`flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors ${
-                isActive(to) ? 'text-amber-400' : 'text-zinc-500'
+                isActive(to) ? 'text-brand' : 'text-zinc-500'
               }`}
             >
               <Icon size={20} />

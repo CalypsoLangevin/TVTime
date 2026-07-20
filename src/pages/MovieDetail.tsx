@@ -77,7 +77,7 @@ export function MovieDetail() {
                     <Clock size={12} /> {detail.runtime} min
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-amber-400">
+                <span className="flex items-center gap-1 text-brand">
                   <Star size={12} fill="currentColor" /> {detail.vote_average.toFixed(1)}
                 </span>
               </div>
@@ -99,17 +99,17 @@ export function MovieDetail() {
                     className="w-9 h-9 flex items-center justify-center rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xl font-light transition"
                     title="Remove one watch"
                   >−</button>
-                  <span className="text-amber-400 font-bold px-3 min-w-[3rem] text-center">{tracked.watchCount}×</span>
+                  <span className="text-brand font-bold px-3 min-w-[3rem] text-center">{tracked.watchCount}×</span>
                   <button
                     onClick={() => setPickingDate(true)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xl font-light transition"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-brand hover:bg-brand text-black text-xl font-light transition"
                     title="Add one watch"
                   >+</button>
                 </div>
               ) : (
                 <button
                   onClick={() => setPickingDate(true)}
-                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg shadow-amber-500/20"
+                  className="flex items-center gap-2 bg-brand hover:bg-brand text-black px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg shadow-brand/20"
                 >
                   <Eye size={15} /> Mark as Watched
                 </button>
@@ -118,7 +118,7 @@ export function MovieDetail() {
                 onClick={() => inList ? removeFromWatchlist(movieId, 'movie') : addToWatchlist(movieId, 'movie')}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition ${
                   inList
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                    ? 'bg-brand/10 border-brand/30 text-brand'
                     : 'bg-zinc-800 border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-700'
                 }`}
               >
@@ -135,9 +135,9 @@ export function MovieDetail() {
                   value={watchDate}
                   max={todayStr()}
                   onChange={(e) => setWatchDate(e.target.value)}
-                  className="bg-zinc-700 text-white text-sm px-3 py-1.5 rounded-lg border border-white/5 focus:border-amber-500/50 focus:outline-none"
+                  className="bg-zinc-700 text-white text-sm px-3 py-1.5 rounded-lg border border-white/5 focus:border-brand/50 focus:outline-none"
                 />
-                <button onClick={confirmWatch} className="p-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition" title="Confirm">
+                <button onClick={confirmWatch} className="p-2 rounded-lg bg-brand hover:bg-brand text-black transition" title="Confirm">
                   <Check size={14} />
                 </button>
                 <button onClick={() => setPickingDate(false)} className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white transition" title="Cancel">

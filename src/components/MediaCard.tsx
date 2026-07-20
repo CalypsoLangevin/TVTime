@@ -29,7 +29,7 @@ export function MediaCard({ id, type, title, poster_path, year, rating, watchCou
   return (
     <Link
       to={`/${type}/${id}`}
-      className="group relative block rounded-xl overflow-hidden bg-zinc-800 shadow-lg hover:scale-[1.03] hover:shadow-amber-500/10 hover:shadow-xl transition-all duration-200"
+      className="group relative block rounded-xl overflow-hidden bg-zinc-800 shadow-lg hover:scale-[1.03] hover:shadow-brand/10 hover:shadow-xl transition-all duration-200"
     >
       <div className="aspect-[2/3] bg-zinc-700">
         {img ? (
@@ -47,7 +47,7 @@ export function MediaCard({ id, type, title, poster_path, year, rating, watchCou
         <div className="flex items-center justify-between mt-0.5">
           <span className="text-zinc-400 text-[10px]">{year?.slice(0, 4)}</span>
           {rating !== undefined && (
-            <span className="flex items-center gap-0.5 text-amber-400 text-[10px]">
+            <span className="flex items-center gap-0.5 text-brand text-[10px]">
               <Star size={9} fill="currentColor" /> {rating.toFixed(1)}
             </span>
           )}
@@ -60,18 +60,18 @@ export function MediaCard({ id, type, title, poster_path, year, rating, watchCou
         className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white hover:bg-black/80 transition"
       >
         {inList
-          ? <BookmarkCheck size={13} className="text-amber-400" />
+          ? <BookmarkCheck size={13} className="text-brand" />
           : <Bookmark size={13} />}
       </button>
 
       {/* Watch count badge */}
       {watchCount !== undefined && watchCount > 0 && (
-        <div className="absolute top-2 left-2 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm text-amber-400 rounded-full px-2 py-0.5 text-[10px] font-medium">
+        <div className="absolute top-2 left-2 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm text-brand rounded-full px-2 py-0.5 text-[10px] font-medium">
           <Eye size={10} /> {watchCount}×
         </div>
       )}
       {episodeCount !== undefined && episodeCount > 0 && (
-        <div className="absolute top-2 left-2 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm text-amber-400 rounded-full px-2 py-0.5 text-[10px] font-medium">
+        <div className="absolute top-2 left-2 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm text-brand rounded-full px-2 py-0.5 text-[10px] font-medium">
           <Eye size={10} /> {episodeCount} ep
         </div>
       )}

@@ -1,116 +1,273 @@
+import { useState } from 'react';
 import { useStore } from '../store';
-import { Film, Tv, Clock, Eye, TrendingUp } from 'lucide-react';
 
-function StatCard({ icon: Icon, label, value, sub }: { icon: React.ElementType; label: string; value: string | number; sub?: string }) {
+function minutesToTime(minutes: number) {
+  const totalHours = Math.floor(minutes / 60);
+  const totalDays = Math.floor(totalHours / 24);
+  const months = Math.floor(totalDays / 30);
+  const days = totalDays % 30;
+  const hours = totalHours % 24;
+  return { months, days, hours };
+}
+
+function TimeDisplay({ minutes }: { minutes: number }) {
+  const { months, days, hours } = minutesToTime(minutes);
   return (
-    <div className="bg-zinc-800/60 border border-white/5 rounded-xl p-4 flex items-start gap-3">
-      <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400 shrink-0">
-        <Icon size={18} />
+    <div className="flex items-end gap-4">
+      <div className="text-center">
+        <div className="text-white text-3xl font-bold leading-none">{months}</div>
+        <div className="text-zinc-500 text-[10px] uppercase tracking-widest mt-1">Months</div>
       </div>
-      <div>
-        <p className="text-zinc-500 text-xs uppercase tracking-wide">{label}</p>
-        <p className="text-white text-xl font-bold mt-0.5">{value}</p>
-        {sub && <p className="text-zinc-500 text-xs mt-0.5">{sub}</p>}
+      <div className="text-center">
+        <div className="text-white text-3xl font-bold leading-none">{days}</div>
+        <div className="text-zinc-500 text-[10px] uppercase tracking-widest mt-1">Days</div>
+      </div>
+      <div className="text-center">
+        <div className="text-white text-3xl font-bold leading-none">{hours}</div>
+        <div className="text-zinc-500 text-[10px] uppercase tracking-widest mt-1">Hours</div>
       </div>
     </div>
   );
 }
 
+function BarChart({ data }: { data: { label: string; value: number }[] }) {
+  if (!data.length || data.every(d => d.value === 0)) {
+    return <div className="h-32 flex items-center justify-center text-zinc-600 text-sm">No data yet</div>;
+  }
+  const max = Math.max(...data.map(d => d.value));
+  const barH = 80;
+
+  return (
+    <div className="overflow-x-auto">
+      <svg
+        width={Math.max(data.length * 36, 300)}
+        height={barH + 40}
+        className="overflow-visible"
+      >
+        {data.map((d, i) => {
+          const h = max > 0 ? Math.max(2, (d.value / max) * barH) : 2;
+          const x = i * 36 + 4;
+          const y = barH - h;
+          return (
+            <g key={d.label}>
+              <rect x={x} y={y} width={24} height={h} rx={2} fill="#52525b" />
+              {d.value > 0 && (
+                <text x={x + 12} y={y - 4} textAnchor="middle" fill="#a1a1aa" fontSize={9}>{d.value}</text>
+              )}
+              <text x={x + 12} y={barH + 14} textAnchor="middle" fill="#52525b" fontSize={9}>{d.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-zinc-900 rounded-xl overflow-hidden">
+      <div className="px-5 pt-5 pb-1">
+        <h2 className="text-white text-lg font-bold">{title}</h2>
+        <div className="border-t border-zinc-700 mt-3" />
+      </div>
+      <div className="px-5 pb-5">{children}</div>
+    </div>
+  );
+}
+
 export function Stats() {
+  const [tab, setTab] = useState<'shows' | 'movies'>('shows');
   const { movies, shows } = useStore();
 
   const movieList = Object.values(movies);
   const showList = Object.values(shows);
 
-  const totalMovieWatches = movieList.reduce((a, m) => a + m.watchCount, 0);
+  // Time calculations
+  const totalShowMinutes = showList.reduce((a, s) => {
+    const avgRuntime = s.episode_run_time?.[0] ?? 40;
+    return a + s.watchedEpisodes.length * avgRuntime;
+  }, 0);
   const totalMovieMinutes = movieList.reduce((a, m) => a + (m.runtime ?? 90) * m.watchCount, 0);
   const totalEpisodes = showList.reduce((a, s) => a + s.watchedEpisodes.length, 0);
-  const totalShowMinutes = totalEpisodes * 40;
-  const totalMinutes = totalMovieMinutes + totalShowMinutes;
-  const totalHours = Math.round(totalMinutes / 60);
-  const totalDays = (totalMinutes / 60 / 24).toFixed(1);
+  const totalMovieWatches = movieList.reduce((a, m) => a + m.watchCount, 0);
 
-  const mostWatched = [...movieList].sort((a, b) => b.watchCount - a.watchCount).slice(0, 5);
-  const mostEpisodes = [...showList].sort((a, b) => b.watchedEpisodes.length - a.watchedEpisodes.length).slice(0, 5);
-
-  const moviesByYear: Record<string, number> = {};
-  movieList.forEach((m) => {
-    const y = m.release_date?.slice(0, 4) ?? 'Unknown';
-    moviesByYear[y] = (moviesByYear[y] ?? 0) + m.watchCount;
+  // Episodes per month (last 12 months)
+  const now = new Date();
+  const monthLabels = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleString('default', { month: 'short' }).slice(0, 3),
+    };
   });
+  const epsByMonth: Record<string, number> = {};
+  showList.forEach(s => {
+    s.watchedEpisodes.forEach(ep => {
+      const d = new Date(ep.watchedAt);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      epsByMonth[key] = (epsByMonth[key] ?? 0) + 1;
+    });
+  });
+  const episodeChartData = monthLabels.map(m => ({ label: m.label, value: epsByMonth[m.key] ?? 0 }));
 
-  if (totalMovieWatches === 0 && totalEpisodes === 0) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-16 text-center">
-        <p className="text-zinc-400">No data yet — start tracking movies and episodes!</p>
-      </div>
-    );
-  }
+  // Movies per month (last 12)
+  const moviesByMonth: Record<string, number> = {};
+  movieList.forEach(m => {
+    if (!m.lastWatched) return;
+    const d = new Date(m.lastWatched);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    moviesByMonth[key] = (moviesByMonth[key] ?? 0) + m.watchCount;
+  });
+  const movieChartData = monthLabels.map(m => ({ label: m.label, value: moviesByMonth[m.key] ?? 0 }));
+
+  // Biggest marathons (most episodes per show)
+  const marathons = [...showList]
+    .sort((a, b) => b.watchedEpisodes.length - a.watchedEpisodes.length)
+    .slice(0, 5)
+    .filter(s => s.watchedEpisodes.length > 0);
+
+  // Most watched movies
+  const topMovies = [...movieList]
+    .sort((a, b) => b.watchCount - a.watchCount)
+    .slice(0, 5)
+    .filter(m => m.watchCount > 0);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
-      <h1 className="text-2xl font-bold text-white tracking-tight">My Stats</h1>
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <h1 className="text-2xl font-bold text-white tracking-tight">Stats</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard icon={Film} label="Movies" value={totalMovieWatches} sub={`${movieList.length} unique`} />
-        <StatCard icon={Tv} label="Episodes" value={totalEpisodes} sub={`${showList.length} shows`} />
-        <StatCard icon={Clock} label="Hours" value={totalHours} sub={`${totalDays} days`} />
-        <StatCard icon={Eye} label="Total watches" value={totalMovieWatches + totalEpisodes} />
-        <StatCard icon={TrendingUp} label="Watching" value={showList.filter((s) => s.status === 'watching').length} sub="active shows" />
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        {mostWatched.length > 0 && (
-          <div className="bg-zinc-800/60 border border-white/5 rounded-xl p-5">
-            <h2 className="text-zinc-300 text-xs font-semibold uppercase tracking-widest mb-4">Most Watched Movies</h2>
-            <div className="space-y-3">
-              {mostWatched.map((m, i) => (
-                <div key={m.id} className="flex items-center gap-3">
-                  <span className="text-zinc-600 text-sm w-4">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm truncate">{m.title}</p>
-                    <p className="text-zinc-500 text-xs">{m.release_date?.slice(0, 4)}</p>
-                  </div>
-                  <span className="text-amber-400 font-semibold text-sm shrink-0">{m.watchCount}×</span>
-                </div>
-              ))}
-            </div>
+      {/* Top 4 stat tiles */}
+      <div className="grid grid-cols-2 gap-px bg-zinc-800 rounded-xl overflow-hidden border border-zinc-800">
+        <div className="bg-zinc-900 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-zinc-400 text-xs uppercase tracking-widest">
+            <span>📺</span> TV Time
           </div>
-        )}
-
-        {mostEpisodes.length > 0 && (
-          <div className="bg-zinc-800/60 border border-white/5 rounded-xl p-5">
-            <h2 className="text-zinc-300 text-xs font-semibold uppercase tracking-widest mb-4">Most Followed Shows</h2>
-            <div className="space-y-3">
-              {mostEpisodes.map((s, i) => (
-                <div key={s.id} className="flex items-center gap-3">
-                  <span className="text-zinc-600 text-sm w-4">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm truncate">{s.name}</p>
-                    <p className="text-zinc-500 text-xs capitalize">{s.status}</p>
-                  </div>
-                  <span className="text-amber-400 font-semibold text-sm shrink-0">{s.watchedEpisodes.length} ep</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {Object.keys(moviesByYear).length > 0 && (
-        <div className="bg-zinc-800/60 border border-white/5 rounded-xl p-5">
-          <h2 className="text-zinc-300 text-xs font-semibold uppercase tracking-widest mb-4">Movies by Release Year</h2>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(moviesByYear)
-              .sort(([a], [b]) => Number(b) - Number(a))
-              .map(([year, count]) => (
-                <div key={year} className="bg-zinc-700/50 border border-white/5 rounded-lg px-3 py-1.5 text-sm flex items-center gap-2">
-                  <span className="text-zinc-300">{year}</span>
-                  <span className="text-amber-400 font-semibold">{count}</span>
-                </div>
-              ))}
-          </div>
+          <TimeDisplay minutes={totalShowMinutes} />
         </div>
+        <div className="bg-zinc-900 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-zinc-400 text-xs uppercase tracking-widest">
+            <span>📺</span> Episodes watched
+          </div>
+          <div className="text-white text-3xl font-bold">{totalEpisodes.toLocaleString()}</div>
+        </div>
+        <div className="bg-zinc-900 p-4 space-y-3 border-t border-zinc-800">
+          <div className="flex items-center gap-2 text-zinc-400 text-xs uppercase tracking-widest">
+            <span>🎬</span> Movie Time
+          </div>
+          <TimeDisplay minutes={totalMovieMinutes} />
+        </div>
+        <div className="bg-zinc-900 p-4 space-y-3 border-t border-zinc-800">
+          <div className="flex items-center gap-2 text-zinc-400 text-xs uppercase tracking-widest">
+            <span>🎬</span> Movies watched
+          </div>
+          <div className="text-white text-3xl font-bold">{totalMovieWatches.toLocaleString()}</div>
+        </div>
+      </div>
+
+      {/* SHOWS / MOVIES tab switcher */}
+      <div className="flex border-b border-zinc-800">
+        {(['shows', 'movies'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-colors ${
+              tab === t
+                ? 'text-white border-b-2 border-brand -mb-px'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'shows' && (
+        <div className="space-y-4">
+          {/* Episodes watched chart */}
+          <SectionCard title="Episodes watched">
+            <div className="mt-4">
+              <BarChart data={episodeChartData} />
+              <p className="text-zinc-500 text-xs uppercase tracking-widest text-center mt-3">Per Month</p>
+            </div>
+          </SectionCard>
+
+          {/* Biggest marathons */}
+          {marathons.length > 0 && (
+            <SectionCard title="Biggest marathons">
+              <div className="mt-3 space-y-0">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-2">
+                  <span className="text-zinc-500 text-xs uppercase tracking-widest">Show</span>
+                  <span className="text-zinc-500 text-xs uppercase tracking-widest text-right">Episodes</span>
+                  <span className="text-zinc-500 text-xs uppercase tracking-widest text-right">Hours</span>
+                </div>
+                {marathons.map((s) => {
+                  const avgRuntime = s.episode_run_time?.[0] ?? 40;
+                  const hours = Math.round(s.watchedEpisodes.length * avgRuntime / 60);
+                  return (
+                    <div key={s.id} className="grid grid-cols-[1fr_auto_auto] gap-4 py-3 border-t border-zinc-800">
+                      <span className="text-white text-sm truncate">{s.name}</span>
+                      <span className="text-white text-sm text-right">{s.watchedEpisodes.length}</span>
+                      <span className="text-white text-sm text-right">{hours}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Added shows */}
+          <SectionCard title="Added shows">
+            <div className="mt-2">
+              <div className="text-white text-5xl font-bold">{showList.length}</div>
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {tab === 'movies' && (
+        <div className="space-y-4">
+          {/* Movies watched chart */}
+          <SectionCard title="Movies watched">
+            <div className="mt-4">
+              <BarChart data={movieChartData} />
+              <p className="text-zinc-500 text-xs uppercase tracking-widest text-center mt-3">Per Month</p>
+            </div>
+          </SectionCard>
+
+          {/* Most watched */}
+          {topMovies.length > 0 && (
+            <SectionCard title="Most watched">
+              <div className="mt-3">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-2">
+                  <span className="text-zinc-500 text-xs uppercase tracking-widest">Movie</span>
+                  <span className="text-zinc-500 text-xs uppercase tracking-widest text-right">Times</span>
+                  <span className="text-zinc-500 text-xs uppercase tracking-widest text-right">Hours</span>
+                </div>
+                {topMovies.map((m) => {
+                  const hours = Math.round((m.runtime ?? 90) * m.watchCount / 60);
+                  return (
+                    <div key={m.id} className="grid grid-cols-[1fr_auto_auto] gap-4 py-3 border-t border-zinc-800">
+                      <span className="text-white text-sm truncate">{m.title}</span>
+                      <span className="text-white text-sm text-right">{m.watchCount}×</span>
+                      <span className="text-white text-sm text-right">{hours}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Added movies */}
+          <SectionCard title="Added movies">
+            <div className="mt-2">
+              <div className="text-white text-5xl font-bold">{movieList.length}</div>
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {totalEpisodes === 0 && totalMovieWatches === 0 && (
+        <p className="text-center text-zinc-500 text-sm py-8">No data yet — start tracking to see your stats.</p>
       )}
     </div>
   );

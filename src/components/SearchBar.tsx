@@ -31,7 +31,7 @@ export function SearchBar() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder='Search movies & shows…'
-        className="w-full bg-zinc-800/80 backdrop-blur-sm text-white placeholder-zinc-500 pl-10 pr-9 py-3 rounded-xl text-sm border border-white/5 focus:border-amber-500/50 focus:outline-none focus:bg-zinc-800 transition"
+        className="w-full bg-zinc-800/80 backdrop-blur-sm text-white placeholder-zinc-500 pl-10 pr-9 py-3 rounded-xl text-sm border border-white/5 focus:border-brand/50 focus:outline-none focus:bg-zinc-800 transition"
       />
       {query && (
         <button type="button" onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
