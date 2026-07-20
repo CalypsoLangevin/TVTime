@@ -12,7 +12,7 @@ import { Stats } from './pages/Stats';
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-950 text-white">
+      <div className="min-h-screen bg-gray-950 text-white pb-16 sm:pb-0">
         <Navbar />
         <Routes>
           <Route path="/" element={<Discover />} />

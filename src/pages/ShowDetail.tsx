@@ -61,15 +61,15 @@ export function ShowDetail() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex gap-8">
-        <div className="w-40 shrink-0">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
+        <div className="w-32 sm:w-40 shrink-0 mx-auto sm:mx-0">
           {img ? <img src={img} alt={detail.name} className="rounded-xl w-full shadow-lg" /> : <div className="aspect-[2/3] bg-gray-800 rounded-xl" />}
         </div>
         <div className="flex-1 space-y-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">{detail.name}</h1>
-            <div className="flex items-center gap-4 mt-1 text-gray-400 text-sm">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white text-center sm:text-left">{detail.name}</h1>
+            <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-gray-400 text-sm">
               <span>{detail.first_air_date?.slice(0, 4)}</span>
               <span>{detail.number_of_seasons} seasons</span>
               <span className="flex items-center gap-1 text-yellow-400">
@@ -145,7 +145,7 @@ export function ShowDetail() {
                       <div key={ep.id} className="flex items-center gap-3 px-4 py-2.5 border-t border-gray-700/50 hover:bg-gray-700/30">
                         <span className="text-gray-500 text-xs w-6 shrink-0">{ep.episode_number}</span>
                         <span className={`flex-1 text-sm ${watched ? 'text-white' : 'text-gray-400'}`}>{ep.name}</span>
-                        {ep.air_date && <span className="text-gray-500 text-xs">{ep.air_date?.slice(0, 10)}</span>}
+                        {ep.air_date && <span className="hidden sm:inline text-gray-500 text-xs">{ep.air_date?.slice(0, 10)}</span>}
                         {ep.runtime && <span className="text-gray-500 text-xs">{ep.runtime}m</span>}
                         <button
                           onClick={() => watched ? unlogEpisode(showId, season.season_number, ep.episode_number) : logEpisode(showId, { seasonNumber: season.season_number, episodeNumber: ep.episode_number })}

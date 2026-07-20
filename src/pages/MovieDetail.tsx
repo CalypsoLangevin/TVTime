@@ -39,9 +39,9 @@ export function MovieDetail() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex gap-8">
-        <div className="w-48 shrink-0">
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
+        <div className="w-32 sm:w-48 shrink-0 mx-auto sm:mx-0">
           {img ? (
             <img src={img} alt={detail.title} className="rounded-xl w-full shadow-lg" />
           ) : (
@@ -51,8 +51,8 @@ export function MovieDetail() {
 
         <div className="flex-1 space-y-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">{detail.title}</h1>
-            <div className="flex items-center gap-4 mt-2 text-gray-400 text-sm">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white text-center sm:text-left">{detail.title}</h1>
+            <div className="flex items-center justify-center sm:justify-start gap-4 mt-2 text-gray-400 text-sm">
               <span>{detail.release_date?.slice(0, 4)}</span>
               {detail.runtime && (
                 <span className="flex items-center gap-1">
@@ -63,7 +63,7 @@ export function MovieDetail() {
                 <Star size={13} fill="currentColor" /> {detail.vote_average.toFixed(1)}
               </span>
             </div>
-            <div className="flex gap-2 mt-2 flex-wrap">
+            <div className="flex gap-2 mt-2 flex-wrap justify-center sm:justify-start">
               {detail.genres.map((g) => (
                 <span key={g.id} className="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded-full">{g.name}</span>
               ))}
