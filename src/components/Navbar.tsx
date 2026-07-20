@@ -16,10 +16,10 @@ export function Navbar() {
   return (
     <>
       {/* Desktop top nav */}
-      <nav className="hidden sm:block sticky top-0 z-50 bg-[#0e0e10]/80 backdrop-blur-md border-b border-white/5">
+      <nav className="hidden sm:block sticky top-0 z-50 bg-[#0D1F26]/80 backdrop-blur-md border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 flex items-center gap-1 h-14">
           <Link to="/" className="font-bold text-lg mr-6 shrink-0 text-brand tracking-wide">
-            TVTime
+            Queued
           </Link>
           {links.map(({ to, label, icon: Icon }) => (
             <Link
@@ -39,7 +39,7 @@ export function Navbar() {
       </nav>
 
       {/* Mobile bottom tab bar */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0e0e10]/90 backdrop-blur-md border-t border-white/5">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0D1F26]/90 backdrop-blur-md border-t border-white/5">
         <div className="flex items-stretch h-16">
           {links.map(({ to, label, icon: Icon }) => (
             <Link

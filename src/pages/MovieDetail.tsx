@@ -54,7 +54,7 @@ export function MovieDetail() {
           ? <img src={backdrop} alt="" className="w-full h-full object-cover object-top" />
           : <div className="w-full h-full bg-zinc-800" />
         }
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e10] via-[#0e0e10]/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0D1F26] via-[#0D1F26]/60 to-transparent" />
       </div>
 
       <div className="max-w-6xl mx-auto px-4 -mt-24 sm:-mt-32 relative z-10 pb-8">

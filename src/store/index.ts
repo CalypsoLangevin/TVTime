@@ -156,6 +156,6 @@ export const useStore = create<State>()(
           (e) => e.seasonNumber === season && e.episodeNumber === episode
         ).length ?? 0,
     }),
-    { name: 'tvtime-store' }
+    { name: 'queued-store' }
   )
 );

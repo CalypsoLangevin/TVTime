@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cinema-bg: #0e0e10;
-  --color-cinema-surface: #18181b;
-  --color-cinema-card: #1f1f23;
-  --color-cinema-border: #2a2a2f;
-  --color-cinema-muted: #71717a;
-  --color-cinema-text: #e4e4e7;
-  --color-brand: #EFBE4E;
+  /* Remap dark zinc shades to navy-teal palette */
+  --color-zinc-950: #090F13;
+  --color-zinc-900: #0D1F26;
+  --color-zinc-800: #132B35;
+  --color-zinc-700: #1A3540;
+  --color-zinc-600: #254A5A;
+  /* Brand teal */
+  --color-brand: #4ECDC4;
 }
 
 * {
@@ -15,6 +16,6 @@
 }
 
 body {
-  background-color: #0e0e10;
-  color: #e4e4e7;
+  background-color: #0D1F26;
+  color: #D4E8EE;
 }
