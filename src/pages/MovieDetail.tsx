@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Eye, Bookmark, BookmarkCheck, Star, Clock } from 'lucide-react';
+import { Eye, Bookmark, BookmarkCheck, Star, Clock, Check, X } from 'lucide-react';
 import { tmdb, posterUrl } from '../lib/tmdb';
 import { useStore } from '../store';
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export function MovieDetail() {
   const { id } = useParams<{ id: string }>();
   const movieId = Number(id);
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof tmdb.movie>> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pickingDate, setPickingDate] = useState(false);
+  const [watchDate, setWatchDate] = useState(todayStr());
 
   const { movies, logMovie, removeMovieWatch, isInWatchlist, addToWatchlist, removeFromWatchlist } = useStore();
   const tracked = movies[movieId];
@@ -23,16 +29,13 @@ export function MovieDetail() {
 
   const img = posterUrl(detail.poster_path, 'w500');
 
-  const handleWatch = () => {
-    logMovie({
-      id: detail.id,
-      title: detail.title,
-      poster_path: detail.poster_path,
-      release_date: detail.release_date,
-      runtime: detail.runtime,
-      watchCount: 0,
-      lastWatched: '',
-    });
+  const confirmWatch = () => {
+    logMovie(
+      { id: detail.id, title: detail.title, poster_path: detail.poster_path, release_date: detail.release_date, runtime: detail.runtime, watchCount: 0, lastWatched: '' },
+      new Date(watchDate).toISOString()
+    );
+    setPickingDate(false);
+    setWatchDate(todayStr());
   };
 
   return (
@@ -81,7 +84,7 @@ export function MovieDetail() {
                 </button>
                 <span className="text-white font-semibold px-2 min-w-[2rem] text-center">{tracked.watchCount}×</span>
                 <button
-                  onClick={handleWatch}
+                  onClick={() => setPickingDate(true)}
                   className="w-8 h-8 flex items-center justify-center rounded-md bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold transition"
                   title="Add one watch"
                 >
@@ -90,7 +93,7 @@ export function MovieDetail() {
               </div>
             ) : (
               <button
-                onClick={handleWatch}
+                onClick={() => setPickingDate(true)}
                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
               >
                 <Eye size={15} /> Mark as Watched
@@ -103,6 +106,25 @@ export function MovieDetail() {
               {inList ? <><BookmarkCheck size={15} className="text-purple-400" /> In Watchlist</> : <><Bookmark size={15} /> Add to Watchlist</>}
             </button>
           </div>
+
+          {pickingDate && (
+            <div className="flex items-center gap-3 bg-gray-800 rounded-xl px-4 py-3 w-fit">
+              <span className="text-gray-400 text-sm">Watched on</span>
+              <input
+                type="date"
+                value={watchDate}
+                max={todayStr()}
+                onChange={(e) => setWatchDate(e.target.value)}
+                className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+              />
+              <button onClick={confirmWatch} className="p-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition" title="Confirm">
+                <Check size={14} />
+              </button>
+              <button onClick={() => setPickingDate(false)} className="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition" title="Cancel">
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {tracked && tracked.watchCount > 0 && (
             <div className="bg-gray-800 rounded-xl p-4 inline-block">

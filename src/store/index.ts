@@ -7,7 +7,7 @@ interface State {
   shows: Record<number, TrackedShow>;
   watchlist: WatchlistEntry[];
 
-  logMovie: (movie: TrackedMovie) => void;
+  logMovie: (movie: TrackedMovie, watchedAt?: string) => void;
   removeMovieWatch: (id: number) => void;
   resetMovieWatches: (id: number) => void;
 
@@ -31,7 +31,7 @@ export const useStore = create<State>()(
       shows: {},
       watchlist: [],
 
-      logMovie: (movie) =>
+      logMovie: (movie, watchedAt?: string) =>
         set((s) => {
           const existing = s.movies[movie.id];
           return {
@@ -40,7 +40,7 @@ export const useStore = create<State>()(
               [movie.id]: {
                 ...movie,
                 watchCount: (existing?.watchCount ?? 0) + 1,
-                lastWatched: new Date().toISOString(),
+                lastWatched: watchedAt ?? new Date().toISOString(),
               },
             },
           };
