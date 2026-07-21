@@ -5,6 +5,7 @@ import { MediaCard } from '../components/MediaCard';
 import type { TMDBMovie, TMDBShow, MediaType } from '../types';
 
 type Item = { id: number; type: MediaType; data: TMDBMovie | TMDBShow };
+type Filter = 'all' | 'movie' | 'tv';
 
 async function fetchItems(entries: { mediaId: number; mediaType: MediaType }[]): Promise<Item[]> {
   const results = await Promise.all(
@@ -40,10 +41,21 @@ function ItemGrid({ items }: { items: Item[] }) {
   );
 }
 
+const FILTERS: { label: string; value: Filter }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Movies', value: 'movie' },
+  { label: 'Shows', value: 'tv' },
+];
+
+function applyFilter(items: Item[], filter: Filter) {
+  return filter === 'all' ? items : items.filter(i => i.type === filter);
+}
+
 export function Watchlist() {
   const { watchlist, favorites } = useStore();
   const [watchlistItems, setWatchlistItems] = useState<Item[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<Item[]>([]);
+  const [filter, setFilter] = useState<Filter>('all');
 
   useEffect(() => {
     fetchItems(watchlist.map(w => ({ mediaId: w.mediaId, mediaType: w.mediaType }))).then(setWatchlistItems);
@@ -64,24 +76,48 @@ export function Watchlist() {
     );
   }
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-10">
-      <h1 className="text-2xl font-bold text-white tracking-tight">My Lists</h1>
+  const filteredFavorites = applyFilter(favoriteItems, filter);
+  const filteredWatchlist = applyFilter(watchlistItems, filter);
 
-      {favoriteItems.length > 0 && (
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white tracking-tight">My Lists</h1>
+        <div className="flex gap-1 bg-zinc-800 rounded-lg p-1">
+          {FILTERS.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                filter === f.value
+                  ? 'bg-zinc-600 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filteredFavorites.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-base font-semibold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
             <span className="text-red-400">♥</span> Favorites
           </h2>
-          <ItemGrid items={favoriteItems} />
+          <ItemGrid items={filteredFavorites} />
         </section>
       )}
 
-      {watchlistItems.length > 0 && (
+      {filteredWatchlist.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-base font-semibold text-zinc-300 uppercase tracking-widest">Watchlist</h2>
-          <ItemGrid items={watchlistItems} />
+          <ItemGrid items={filteredWatchlist} />
         </section>
+      )}
+
+      {filteredFavorites.length === 0 && filteredWatchlist.length === 0 && (
+        <p className="text-zinc-500 text-sm text-center py-8">No {filter === 'movie' ? 'movies' : 'shows'} saved yet.</p>
       )}
     </div>
   );
