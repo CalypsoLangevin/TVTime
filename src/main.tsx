@@ -3,6 +3,16 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Restore path after GitHub Pages 404 redirect
+const params = new URLSearchParams(window.location.search);
+const redirected = params.get('r');
+if (redirected) {
+  const base = '/Cinema-Tracker';
+  params.delete('r');
+  const rest = params.toString() ? '?' + params.toString() : '';
+  window.history.replaceState(null, '', base + redirected + rest);
+}
+
 // Migrate data from old tvtime-store key to queued-store
 const OLD_KEY = 'tvtime-store';
 const NEW_KEY = 'queued-store';
