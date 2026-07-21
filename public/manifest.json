@@ -1,0 +1,11 @@
+{
+  "name": "Queued",
+  "short_name": "Queued",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "theme_color": "#0D1F26",
+  "background_color": "#0D1F26",
+  "display": "standalone",
+  "start_url": "/"
+}
