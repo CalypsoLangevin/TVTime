@@ -27,6 +27,10 @@ interface State {
 
   hasWatchedEpisode: (showId: number, season: number, episode: number) => boolean;
   episodeWatchCount: (showId: number, season: number, episode: number) => number;
+
+  hiddenShows: number[];
+  hideFromContinueWatching: (id: number) => void;
+  unhideFromContinueWatching: (id: number) => void;
 }
 
 export const useStore = create<State>()(
@@ -36,6 +40,7 @@ export const useStore = create<State>()(
       shows: {},
       watchlist: [],
       favorites: [],
+      hiddenShows: [],
 
       logMovie: (movie, watchedAt?: string) =>
         set((s) => {
@@ -170,6 +175,14 @@ export const useStore = create<State>()(
         get().shows[showId]?.watchedEpisodes.filter(
           (e) => e.seasonNumber === season && e.episodeNumber === episode
         ).length ?? 0,
+
+      hideFromContinueWatching: (id) =>
+        set((s) => ({
+          hiddenShows: s.hiddenShows.includes(id) ? s.hiddenShows : [...s.hiddenShows, id],
+        })),
+
+      unhideFromContinueWatching: (id) =>
+        set((s) => ({ hiddenShows: s.hiddenShows.filter((h) => h !== id) })),
     }),
     { name: 'queued-store' }
   )

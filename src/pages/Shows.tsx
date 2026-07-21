@@ -1,19 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, X, ChevronRight, Clock } from 'lucide-react';
+import { Search, X, ChevronRight, Clock, ChevronDown, EyeOff } from 'lucide-react';
 import { useStore } from '../store';
 import { MediaCard } from '../components/MediaCard';
 import { tmdb, posterUrl } from '../lib/tmdb';
 import type { TrackedShow } from '../types';
+
+const COLLAPSED_COUNT = 10;
 
 // ─── Next-episode cache ───────────────────────────────────────────────────────
 interface NextEp {
   season: number;
   episode: number;
   name: string;
-  airDate: string | null; // null = already aired / unknown
+  airDate: string | null;
 }
-type UpcomingMap = Record<number, NextEp | null>; // showId → info (null = nothing upcoming)
+type UpcomingMap = Record<number, NextEp | null>;
 
 function useUpcoming(shows: TrackedShow[]) {
   const [map, setMap] = useState<UpcomingMap>({});
@@ -47,51 +49,113 @@ function useUpcoming(shows: TrackedShow[]) {
 // ─── Next unwatched episode ───────────────────────────────────────────────────
 function nextToWatch(show: TrackedShow): { season: number; episode: number } | null {
   const watched = new Set(show.watchedEpisodes.map((e) => `${e.seasonNumber}x${e.episodeNumber}`));
-  // Walk from S01E01 upward — we don't know total eps per season here,
-  // so find the highest watched ep and return the next one
   if (!watched.size) return { season: 1, episode: 1 };
   const sorted = [...show.watchedEpisodes].sort((a, b) =>
     a.seasonNumber !== b.seasonNumber ? a.seasonNumber - b.seasonNumber : a.episodeNumber - b.episodeNumber
   );
   const last = sorted[sorted.length - 1];
-  // Try next episode in same season, then S+1 E1
   const nextEp = { season: last.seasonNumber, episode: last.episodeNumber + 1 };
   return watched.has(`${nextEp.season}x${nextEp.episode}`) ? null : nextEp;
 }
 
-// ─── Row component ─────────────────────────────────────────────────────────────
-function ShowRow({ show, nextEp, upcoming }: { show: TrackedShow; nextEp: { season: number; episode: number } | null; upcoming: NextEp | null | undefined }) {
+// ─── Swipeable row ────────────────────────────────────────────────────────────
+function ShowRow({
+  show,
+  nextEp,
+  upcoming,
+  onHide,
+}: {
+  show: TrackedShow;
+  nextEp: { season: number; episode: number } | null;
+  upcoming: NextEp | null | undefined;
+  onHide?: () => void;
+}) {
   const poster = posterUrl(show.poster_path, 'w185');
   const lastWatched = show.watchedEpisodes.length > 0
     ? [...show.watchedEpisodes].sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime())[0]
     : null;
 
+  const startXRef = useRef<number | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [swiped, setSwiped] = useState(false);
+
+  const THRESHOLD = 72; // px needed to reveal the hide button
+
+  function onTouchStart(e: React.TouchEvent) {
+    startXRef.current = e.touches[0].clientX;
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (startXRef.current === null) return;
+    const dx = startXRef.current - e.touches[0].clientX;
+    if (dx > 0) setSwipeOffset(Math.min(dx, THRESHOLD));
+  }
+  function onTouchEnd() {
+    if (swipeOffset >= THRESHOLD) {
+      setSwiped(true);
+    } else {
+      setSwipeOffset(0);
+    }
+    startXRef.current = null;
+  }
+
+  // After the "swiped" state reveals the button, animate it closed then call onHide
+  function handleHide() {
+    setSwiped(false);
+    setSwipeOffset(0);
+    onHide?.();
+  }
+
+  const offset = swiped ? THRESHOLD : swipeOffset;
+
   return (
-    <Link to={`/tv/${show.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition rounded-xl">
-      <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 bg-zinc-800">
-        {poster ? <img src={poster} alt={show.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-zinc-700" />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-medium truncate">{show.name}</p>
-        {nextEp && (
-          <p className="text-brand text-xs mt-0.5">
-            Next: S{String(nextEp.season).padStart(2, '0')} · E{String(nextEp.episode).padStart(2, '0')}
-          </p>
-        )}
-        {lastWatched && (
-          <p className="text-zinc-500 text-xs mt-0.5">
-            Last watched {new Date(lastWatched.watchedAt).toLocaleDateString()}
-          </p>
-        )}
-      </div>
-      {upcoming && (
-        <div className="text-right shrink-0">
-          <p className="text-xs text-zinc-400">S{String(upcoming.season).padStart(2, '0')}E{String(upcoming.episode).padStart(2, '0')}</p>
-          <p className="text-xs text-brand mt-0.5">{upcoming.airDate ? new Date(upcoming.airDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Soon'}</p>
+    <div className="relative overflow-hidden">
+      {/* Hide button revealed behind the row */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-center bg-zinc-700 text-zinc-300 hover:bg-zinc-600 transition-colors cursor-pointer"
+        style={{ width: THRESHOLD }}
+        onClick={handleHide}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <EyeOff size={16} />
+          <span className="text-[10px] font-medium">Hide</span>
         </div>
-      )}
-      <ChevronRight size={14} className="text-zinc-600 shrink-0" />
-    </Link>
+      </div>
+
+      {/* Row content, slides left on swipe */}
+      <Link
+        to={`/tv/${show.id}`}
+        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition rounded-xl bg-zinc-800/60 relative"
+        style={{ transform: `translateX(-${offset}px)`, transition: swipeOffset === 0 && !swiped ? 'transform 0.2s' : undefined }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={(e) => { if (offset > 4) e.preventDefault(); }}
+      >
+        <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 bg-zinc-800">
+          {poster ? <img src={poster} alt={show.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-zinc-700" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-white text-sm font-medium truncate">{show.name}</p>
+          {nextEp && (
+            <p className="text-brand text-xs mt-0.5">
+              Next: S{String(nextEp.season).padStart(2, '0')} · E{String(nextEp.episode).padStart(2, '0')}
+            </p>
+          )}
+          {lastWatched && (
+            <p className="text-zinc-500 text-xs mt-0.5">
+              Last watched {new Date(lastWatched.watchedAt).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+        {upcoming && (
+          <div className="text-right shrink-0">
+            <p className="text-xs text-zinc-400">S{String(upcoming.season).padStart(2, '0')}E{String(upcoming.episode).padStart(2, '0')}</p>
+            <p className="text-xs text-brand mt-0.5">{upcoming.airDate ? new Date(upcoming.airDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Soon'}</p>
+          </div>
+        )}
+        <ChevronRight size={14} className="text-zinc-600 shrink-0" />
+      </Link>
+    </div>
   );
 }
 
@@ -100,9 +164,12 @@ type Tab = 'towatch' | 'upcoming';
 
 export function Shows() {
   const shows = useStore((s) => s.shows);
+  const hiddenShows = useStore((s) => s.hiddenShows);
+  const { hideFromContinueWatching, unhideFromContinueWatching } = useStore();
   const list = Object.values(shows);
   const [tab, setTab] = useState<Tab>('towatch');
   const [query, setQuery] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   const watching = useMemo(() => list.filter((s) => s.status === 'watching'), [list]);
   const upcomingMap = useUpcoming(watching);
@@ -113,14 +180,23 @@ export function Shows() {
     return list.filter((s) => s.name.toLowerCase().includes(q));
   }, [list, query]);
 
-  // Sorted by most recently watched episode
   const toWatchList = useMemo(() =>
-    [...watching].sort((a, b) => {
-      const latestA = a.watchedEpisodes.length ? Math.max(...a.watchedEpisodes.map((e) => new Date(e.watchedAt).getTime())) : 0;
-      const latestB = b.watchedEpisodes.length ? Math.max(...b.watchedEpisodes.map((e) => new Date(e.watchedAt).getTime())) : 0;
-      return latestB - latestA;
-    }),
-    [watching]
+    [...watching]
+      .filter((s) => !hiddenShows.includes(s.id))
+      .sort((a, b) => {
+        const latestA = a.watchedEpisodes.length ? Math.max(...a.watchedEpisodes.map((e) => new Date(e.watchedAt).getTime())) : 0;
+        const latestB = b.watchedEpisodes.length ? Math.max(...b.watchedEpisodes.map((e) => new Date(e.watchedAt).getTime())) : 0;
+        return latestB - latestA;
+      }),
+    [watching, hiddenShows]
+  );
+
+  const visibleToWatch = expanded ? toWatchList : toWatchList.slice(0, COLLAPSED_COUNT);
+  const hasMore = toWatchList.length > COLLAPSED_COUNT;
+
+  const hiddenList = useMemo(() =>
+    watching.filter((s) => hiddenShows.includes(s.id)),
+    [watching, hiddenShows]
   );
 
   const upcomingList = useMemo(() =>
@@ -191,19 +267,64 @@ export function Shows() {
           {/* To Watch tab */}
           {tab === 'towatch' && (
             <div className="space-y-6">
-              {/* Next episodes */}
+              {/* Continue watching */}
               {toWatchList.length > 0 && (
                 <section>
-                  <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2 px-1">Continue watching</h2>
+                  <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2 px-1">
+                    Continue watching
+                    {toWatchList.length > COLLAPSED_COUNT && (
+                      <span className="ml-2 normal-case font-normal text-zinc-600">
+                        ({toWatchList.length} shows)
+                      </span>
+                    )}
+                  </h2>
                   <div className="bg-zinc-800/60 border border-white/5 rounded-xl overflow-hidden divide-y divide-white/5">
-                    {toWatchList.map((s) => (
-                      <ShowRow key={s.id} show={s} nextEp={nextToWatch(s)} upcoming={undefined} />
+                    {visibleToWatch.map((s) => (
+                      <ShowRow
+                        key={s.id}
+                        show={s}
+                        nextEp={nextToWatch(s)}
+                        upcoming={undefined}
+                        onHide={() => hideFromContinueWatching(s.id)}
+                      />
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <button
+                      onClick={() => setExpanded((v) => !v)}
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 py-2 transition-colors"
+                    >
+                      <ChevronDown size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                      {expanded ? 'Show less' : `Show ${toWatchList.length - COLLAPSED_COUNT} more`}
+                    </button>
+                  )}
+                </section>
+              )}
+
+              {/* Hidden shows */}
+              {hiddenList.length > 0 && (
+                <section>
+                  <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2 px-1">Hidden</h2>
+                  <div className="bg-zinc-800/60 border border-white/5 rounded-xl overflow-hidden divide-y divide-white/5">
+                    {hiddenList.map((s) => (
+                      <div key={s.id} className="flex items-center gap-3 px-4 py-3">
+                        <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 bg-zinc-800">
+                          {s.poster_path && <img src={posterUrl(s.poster_path, 'w185')!} alt={s.name} className="w-full h-full object-cover opacity-40" />}
+                        </div>
+                        <p className="flex-1 text-zinc-500 text-sm truncate">{s.name}</p>
+                        <button
+                          onClick={() => unhideFromContinueWatching(s.id)}
+                          className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600"
+                        >
+                          Unhide
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </section>
               )}
 
-              {/* Recently watched episodes (chronological) */}
+              {/* Recently watched */}
               <section>
                 <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2 px-1">Recently watched</h2>
                 <div className="bg-zinc-800/60 border border-white/5 rounded-xl overflow-hidden divide-y divide-white/5">
