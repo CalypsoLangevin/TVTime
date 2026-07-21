@@ -67,9 +67,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const doSave = useCallback(async (tok: string) => {
     setSyncStatus('saving');
     try {
-      await saveToGist(tok, currentStoreSnapshot());
+      const snapshot = currentStoreSnapshot();
+      const json = JSON.stringify(snapshot);
+      const kb = Math.round(json.length / 1024);
+      console.log(`[sync] saving ${kb}kb to Gist`);
+      await saveToGist(tok, snapshot);
+      console.log('[sync] saved ok');
       setSyncStatus('saved');
-    } catch {
+    } catch (e) {
+      console.error('[sync] save failed:', e);
       setSyncStatus('error');
     }
   }, []);

@@ -62,8 +62,11 @@ export async function loadFromGist(token: string): Promise<Record<string, unknow
 
 export async function saveToGist(token: string, state: unknown): Promise<void> {
   const gistId = await findOrCreateGist(token);
-  await octokit(token).rest.gists.update({
+  const content = JSON.stringify(state);
+  console.log(`[gist] updating gist ${gistId}, content length: ${content.length}`);
+  const res = await octokit(token).rest.gists.update({
     gist_id: gistId,
-    files: { [GIST_FILENAME]: { content: JSON.stringify(state) } },
+    files: { [GIST_FILENAME]: { content } },
   });
+  console.log(`[gist] update status: ${res.status}`);
 }
