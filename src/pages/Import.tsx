@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store';
+import { useAuth } from '../lib/auth';
 import type { TrackedMovie, TrackedShow } from '../types';
 
 const BASE = 'https://api.themoviedb.org/3';
@@ -111,6 +112,7 @@ export function Import() {
   const [done, setDone] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const store = useStore();
+  const { forceSync } = useAuth();
 
   async function handleFile(file: File) {
     const text = await file.text();
@@ -193,6 +195,7 @@ export function Import() {
     }
 
     setRunning(false);
+    await forceSync();
     setDone(true);
   }
 
@@ -285,6 +288,7 @@ export function Import() {
     }
 
     setRunning(false);
+    await forceSync();
     setDone(true);
   }
 

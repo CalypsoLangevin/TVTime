@@ -11,6 +11,7 @@ interface AuthState {
   syncStatus: SyncStatus;
   login: (token: string) => Promise<void>;
   logout: () => void;
+  forceSync: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthState>({
   syncStatus: 'idle',
   login: async () => {},
   logout: () => {},
+  forceSync: async () => {},
 });
 
 export function useAuth() {
@@ -75,6 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const scheduleSync = useCallback((tok: string) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => doSave(tok), 1500);
+  }, [doSave]);
+
+  const forceSync = useCallback(async () => {
+    const tok = loadToken();
+    if (!tok) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    await doSave(tok);
   }, [doSave]);
 
   const login = useCallback(async (tok: string) => {
@@ -140,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token, scheduleSync]);
 
   return (
-    <AuthContext.Provider value={{ token, loading, error, syncStatus, login, logout }}>
+    <AuthContext.Provider value={{ token, loading, error, syncStatus, login, logout, forceSync }}>
       {children}
     </AuthContext.Provider>
   );
