@@ -15,6 +15,8 @@ export function ShowDetail() {
 
   const { shows, addShow, setShowStatus, logEpisode, unlogEpisode, hasWatchedEpisode, isInWatchlist, addToWatchlist, removeFromWatchlist, isInFavorites, addToFavorites, removeFromFavorites } = useStore();
   const tracked = shows[showId];
+  const episodeWatchedAt = (sn: number, en: number) =>
+    tracked?.watchedEpisodes.find((e) => e.seasonNumber === sn && e.episodeNumber === en)?.watchedAt;
   const inList = isInWatchlist(showId, 'tv');
   const inFavorites = isInFavorites(showId, 'tv');
 
@@ -189,11 +191,15 @@ export function ShowDetail() {
                     </div>
                     {eps.map((ep) => {
                       const watched = hasWatchedEpisode(showId, season.season_number, ep.episode_number);
+                      const watchedAt = watched ? episodeWatchedAt(season.season_number, ep.episode_number) : undefined;
                       return (
                         <div key={ep.id} className="flex items-center gap-3 px-4 py-3 border-t border-white/5 hover:bg-white/3 transition">
                           <span className="text-zinc-600 text-xs w-5 shrink-0 text-right">{ep.episode_number}</span>
                           <span className={`flex-1 text-sm ${watched ? 'text-white' : 'text-zinc-400'}`}>{ep.name}</span>
-                          {ep.air_date && <span className="hidden sm:inline text-zinc-600 text-xs">{ep.air_date?.slice(0, 10)}</span>}
+                          {watchedAt
+                            ? <span className="hidden sm:inline text-brand/70 text-xs">{new Date(watchedAt).toLocaleDateString()}</span>
+                            : ep.air_date && <span className="hidden sm:inline text-zinc-600 text-xs">{ep.air_date?.slice(0, 10)}</span>
+                          }
                           {ep.runtime && <span className="text-zinc-600 text-xs">{ep.runtime}m</span>}
                           <button
                             onClick={() => watched

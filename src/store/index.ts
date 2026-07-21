@@ -40,13 +40,16 @@ export const useStore = create<State>()(
       logMovie: (movie, watchedAt?: string) =>
         set((s) => {
           const existing = s.movies[movie.id];
+          const date = watchedAt ?? new Date().toISOString();
+          const prevDates = existing?.watchDates ?? (existing?.lastWatched ? [existing.lastWatched] : []);
           return {
             movies: {
               ...s.movies,
               [movie.id]: {
                 ...movie,
                 watchCount: (existing?.watchCount ?? 0) + 1,
-                lastWatched: watchedAt ?? new Date().toISOString(),
+                lastWatched: date,
+                watchDates: [...prevDates, date],
               },
             },
           };
@@ -61,7 +64,18 @@ export const useStore = create<State>()(
             delete next[id];
             return { movies: next };
           }
-          return { movies: { ...s.movies, [id]: { ...m, watchCount: m.watchCount - 1 } } };
+          const newDates = m.watchDates ? m.watchDates.slice(0, -1) : [];
+          return {
+            movies: {
+              ...s.movies,
+              [id]: {
+                ...m,
+                watchCount: m.watchCount - 1,
+                watchDates: newDates,
+                lastWatched: newDates.length > 0 ? newDates[newDates.length - 1] : m.lastWatched,
+              },
+            },
+          };
         }),
 
       resetMovieWatches: (id) =>

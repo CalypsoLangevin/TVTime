@@ -74,6 +74,7 @@ export interface TrackedMovie {
   runtime: number | null;
   watchCount: number;
   lastWatched: string;
+  watchDates?: string[];
 }
 
 export interface TrackedShow {

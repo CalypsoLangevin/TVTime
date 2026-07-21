@@ -160,12 +160,19 @@ export function MovieDetail() {
 
             {/* Watch stats */}
             {tracked && tracked.watchCount > 0 && (
-              <div className="bg-zinc-800/60 border border-white/5 rounded-xl p-4 inline-flex items-center gap-3 flex-wrap">
-                <span className="text-zinc-400 text-sm">Last watched</span>
-                <span className="text-white text-sm">{new Date(tracked.lastWatched).toLocaleDateString()}</span>
-                {detail.runtime && (
-                  <span className="text-zinc-500 text-sm">· {Math.round(tracked.watchCount * detail.runtime / 60)}h total</span>
-                )}
+              <div className="bg-zinc-800/60 border border-white/5 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {detail.runtime && (
+                    <span className="text-zinc-500 text-sm">{Math.round(tracked.watchCount * detail.runtime / 60)}h total</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(tracked.watchDates ?? [tracked.lastWatched]).map((d, i) => (
+                    <span key={i} className="bg-zinc-700 text-zinc-200 text-xs px-2.5 py-1 rounded-full">
+                      {new Date(d).toLocaleDateString()}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>

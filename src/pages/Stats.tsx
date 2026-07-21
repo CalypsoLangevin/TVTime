@@ -150,13 +150,15 @@ export function Stats() {
   });
   const episodeChartData = monthLabels.map(m => ({ label: m.label, value: epsByMonth[m.key] ?? 0 }));
 
-  // Movies per month (last 12)
+  // Movies per month (last 12) — use individual watchDates so rewatches land in the right month
   const moviesByMonth: Record<string, number> = {};
   movieList.forEach(m => {
-    if (!m.lastWatched) return;
-    const d = new Date(m.lastWatched);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    moviesByMonth[key] = (moviesByMonth[key] ?? 0) + m.watchCount;
+    const dates = m.watchDates ?? (m.lastWatched ? [m.lastWatched] : []);
+    dates.forEach(dateStr => {
+      const d = new Date(dateStr);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      moviesByMonth[key] = (moviesByMonth[key] ?? 0) + 1;
+    });
   });
   const movieChartData = monthLabels.map(m => ({ label: m.label, value: moviesByMonth[m.key] ?? 0 }));
 
