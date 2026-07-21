@@ -167,22 +167,32 @@ export function ShowDetail() {
   };
 
   const confirmRewatchShow = () => {
-    if (!detail || !rewatchStart || !rewatchEnd) return;
-    // Collect all watched episodes in order
+    if (!detail) return;
+    // Collect all watched episodes in order, keeping the TMDBEpisode for air_date fallback
     const allEps = detail.seasons
       .filter((s) => s.season_number > 0)
       .flatMap((s) => {
         const eps = episodes[s.season_number] ?? [];
-        return eps.map((e) => ({ season: s.season_number, episode: e.episode_number }));
+        return eps.map((e) => ({ season: s.season_number, episode: e.episode_number, air_date: e.air_date }));
       })
       .filter((ep) => hasWatchedEpisode(showId, ep.season, ep.episode));
     if (!allEps.length) return;
-    const start = new Date(rewatchStart).getTime();
-    const end = new Date(rewatchEnd).getTime();
-    const n = allEps.length;
-    const dates = allEps.map((_, i) =>
-      new Date(n === 1 ? end : start + i * (end - start) / (n - 1)).toISOString()
-    );
+
+    let dates: string[];
+    if (rewatchStart && rewatchEnd) {
+      const start = new Date(rewatchStart).getTime();
+      const end = new Date(rewatchEnd).getTime();
+      const n = allEps.length;
+      dates = allEps.map((_, i) =>
+        new Date(n === 1 ? end : start + i * (end - start) / (n - 1)).toISOString()
+      );
+    } else {
+      // Fall back to each episode's air date
+      dates = allEps.map((ep) =>
+        ep.air_date ? new Date(ep.air_date).toISOString() : new Date().toISOString()
+      );
+    }
+
     rewatchShow(showId, allEps, dates);
     setRewatchPanel(false);
     setRewatchStart('');
@@ -296,7 +306,7 @@ export function ShowDetail() {
 
             {rewatchPanel && (
               <div className="flex items-center gap-2 flex-wrap bg-zinc-800/60 border border-white/5 rounded-xl px-4 py-3">
-                <span className="text-zinc-400 text-xs w-full mb-1">Rewatch — spread all watched episodes between:</span>
+                <span className="text-zinc-400 text-xs w-full mb-1">Rewatch — optionally pick a date range, or leave empty to use each episode's release date:</span>
                 <div className="flex items-center gap-2 flex-wrap">
                   <input
                     type="date"
@@ -318,8 +328,7 @@ export function ShowDetail() {
                   />
                   <button
                     onClick={confirmRewatchShow}
-                    disabled={!rewatchStart || !rewatchEnd}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand text-black text-xs font-medium disabled:opacity-40 transition"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand text-black text-xs font-medium transition"
                   >
                     <Check size={12} /> Confirm
                   </button>
