@@ -89,7 +89,13 @@ export function ShowDetail() {
     if (!detail) return;
     const totalEps = detail.seasons.reduce((acc, s) => acc + (s.season_number > 0 ? s.episode_count : 0), 0);
     const watchedAfter = (tracked?.watchedEpisodes.length ?? 0) + 1;
-    if (watchedAfter >= totalEps) removeFromWatchlist(showId, 'tv');
+    if (watchedAfter >= totalEps) {
+      removeFromWatchlist(showId, 'tv');
+      // Only auto-complete if no upcoming episodes
+      if (!detail.next_episode_to_air) {
+        setShowStatus(showId, 'completed');
+      }
+    }
   };
   const inFavorites = isInFavorites(showId, 'tv');
 
@@ -97,6 +103,7 @@ export function ShowDetail() {
     tmdb.show(showId).then((d) => {
       setDetail(d);
       const tmdbStatus: string = d.status ?? '';
+      const hasUpcoming = !!d.next_episode_to_air;
       addShow({
         id: d.id,
         name: d.name,
@@ -106,6 +113,11 @@ export function ShowDetail() {
         watchedEpisodes: [],
         status: tmdbStatus === 'Ended' || tmdbStatus === 'Canceled' ? 'completed' : 'watching',
       });
+      // If already tracked as completed but new episodes are coming, restore to watching
+      const existing = useStore.getState().shows[showId];
+      if (existing?.status === 'completed' && hasUpcoming) {
+        setShowStatus(showId, 'watching');
+      }
     }).finally(() => setLoading(false));
   }, [showId]);
 
