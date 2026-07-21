@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Eye, EyeOff, Bookmark, BookmarkCheck, Heart, Star, CheckCheck, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Bookmark, BookmarkCheck, Heart, Star, CheckCheck, Check, X, RefreshCw } from 'lucide-react';
 import { tmdb, posterUrl, backdropUrl } from '../lib/tmdb';
 import { useStore } from '../store';
 import type { TMDBEpisode, TMDBShowDetails } from '../types';
@@ -15,19 +15,29 @@ interface EpisodeRowProps {
   seasonNumber: number;
   watched: boolean;
   watchedAt: string | undefined;
+  rewatchDates: string[];
   onLog: (seasonNumber: number, episodeNumber: number, date: string) => void;
   onUnlog: (seasonNumber: number, episodeNumber: number) => void;
+  onRewatch: (seasonNumber: number, episodeNumber: number, date: string) => void;
 }
 
-function EpisodeRow({ ep, seasonNumber, watched, watchedAt, onLog, onUnlog }: EpisodeRowProps) {
-  const [picking, setPicking] = useState(false);
+function EpisodeRow({ ep, seasonNumber, watched, watchedAt, rewatchDates, onLog, onUnlog, onRewatch }: EpisodeRowProps) {
+  const [mode, setMode] = useState<'idle' | 'log' | 'rewatch'>('idle');
   const [date, setDate] = useState(todayStr());
 
-  const confirm = () => {
+  const confirmLog = () => {
     onLog(seasonNumber, ep.episode_number, new Date(date).toISOString());
-    setPicking(false);
+    setMode('idle');
     setDate(todayStr());
   };
+
+  const confirmRewatch = () => {
+    onRewatch(seasonNumber, ep.episode_number, new Date(date).toISOString());
+    setMode('idle');
+    setDate(todayStr());
+  };
+
+  const totalWatches = watched ? 1 + rewatchDates.length : 0;
 
   return (
     <div className="border-t border-white/5">
@@ -39,8 +49,20 @@ function EpisodeRow({ ep, seasonNumber, watched, watchedAt, onLog, onUnlog }: Ep
           : ep.air_date && <span className="hidden sm:inline text-zinc-600 text-xs">{ep.air_date?.slice(0, 10)}</span>
         }
         {ep.runtime && <span className="text-zinc-600 text-xs">{ep.runtime}m</span>}
+        {totalWatches > 1 && (
+          <span className="text-xs text-zinc-500 bg-zinc-700 rounded px-1.5 py-0.5">×{totalWatches}</span>
+        )}
+        {watched && (
+          <button
+            onClick={() => setMode(mode === 'rewatch' ? 'idle' : 'rewatch')}
+            className="p-1.5 rounded-full transition shrink-0 bg-zinc-700 text-zinc-400 hover:text-brand"
+            title="Log rewatch"
+          >
+            <RefreshCw size={12} />
+          </button>
+        )}
         <button
-          onClick={() => watched ? onUnlog(seasonNumber, ep.episode_number) : setPicking(true)}
+          onClick={() => watched ? onUnlog(seasonNumber, ep.episode_number) : setMode(mode === 'log' ? 'idle' : 'log')}
           className={`p-1.5 rounded-full transition shrink-0 ${
             watched ? 'bg-brand text-black' : 'bg-zinc-700 text-zinc-400 hover:text-white'
           }`}
@@ -48,9 +70,9 @@ function EpisodeRow({ ep, seasonNumber, watched, watchedAt, onLog, onUnlog }: Ep
           {watched ? <Eye size={13} /> : <EyeOff size={13} />}
         </button>
       </div>
-      {picking && (
+      {(mode === 'log' || mode === 'rewatch') && (
         <div className="flex items-center gap-2 px-4 pb-3 flex-wrap">
-          <span className="text-zinc-400 text-xs">Watched on</span>
+          <span className="text-zinc-400 text-xs">{mode === 'rewatch' ? 'Rewatched on' : 'Watched on'}</span>
           <input
             type="date"
             value={date}
@@ -58,10 +80,14 @@ function EpisodeRow({ ep, seasonNumber, watched, watchedAt, onLog, onUnlog }: Ep
             onChange={(e) => setDate(e.target.value)}
             className="bg-zinc-700 text-white text-xs px-2.5 py-1.5 rounded-lg border border-white/5 focus:border-brand/50 focus:outline-none"
           />
-          <button onClick={confirm} className="p-1.5 rounded-lg bg-brand text-black transition" title="Confirm">
+          <button
+            onClick={mode === 'rewatch' ? confirmRewatch : confirmLog}
+            className="p-1.5 rounded-lg bg-brand text-black transition"
+            title="Confirm"
+          >
             <Check size={12} />
           </button>
-          <button onClick={() => setPicking(false)} className="p-1.5 rounded-lg bg-zinc-700 text-white transition" title="Cancel">
+          <button onClick={() => setMode('idle')} className="p-1.5 rounded-lg bg-zinc-700 text-white transition" title="Cancel">
             <X size={12} />
           </button>
         </div>
@@ -78,11 +104,16 @@ export function ShowDetail() {
   const [openSeason, setOpenSeason] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { shows, addShow, setShowStatus, logEpisode, unlogEpisode, hasWatchedEpisode, isInWatchlist, addToWatchlist, removeFromWatchlist, isInFavorites, addToFavorites, removeFromFavorites } = useStore();
+  const { shows, addShow, setShowStatus, logEpisode, unlogEpisode, logEpisodeRewatch, rewatchShow, hasWatchedEpisode, isInWatchlist, addToWatchlist, removeFromWatchlist, isInFavorites, addToFavorites, removeFromFavorites } = useStore();
   const tracked = shows[showId];
   const episodeWatchedAt = (sn: number, en: number) =>
     tracked?.watchedEpisodes.find((e) => e.seasonNumber === sn && e.episodeNumber === en)?.watchedAt;
+  const episodeRewatchDates = (sn: number, en: number) =>
+    tracked?.watchedEpisodes.find((e) => e.seasonNumber === sn && e.episodeNumber === en)?.rewatchDates ?? [];
   const inList = isInWatchlist(showId, 'tv');
+  const [rewatchPanel, setRewatchPanel] = useState(false);
+  const [rewatchStart, setRewatchStart] = useState('');
+  const [rewatchEnd, setRewatchEnd] = useState('');
 
   const logEpisodeAndCheck = (sn: number, en: number, date?: string) => {
     logEpisode(showId, { seasonNumber: sn, episodeNumber: en }, date);
@@ -133,6 +164,29 @@ export function ShowDetail() {
       if (watched) logEpisodeAndCheck(seasonNumber, ep.episode_number);
       else unlogEpisode(showId, seasonNumber, ep.episode_number);
     });
+  };
+
+  const confirmRewatchShow = () => {
+    if (!detail || !rewatchStart || !rewatchEnd) return;
+    // Collect all watched episodes in order
+    const allEps = detail.seasons
+      .filter((s) => s.season_number > 0)
+      .flatMap((s) => {
+        const eps = episodes[s.season_number] ?? [];
+        return eps.map((e) => ({ season: s.season_number, episode: e.episode_number }));
+      })
+      .filter((ep) => hasWatchedEpisode(showId, ep.season, ep.episode));
+    if (!allEps.length) return;
+    const start = new Date(rewatchStart).getTime();
+    const end = new Date(rewatchEnd).getTime();
+    const n = allEps.length;
+    const dates = allEps.map((_, i) =>
+      new Date(n === 1 ? end : start + i * (end - start) / (n - 1)).toISOString()
+    );
+    rewatchShow(showId, allEps, dates);
+    setRewatchPanel(false);
+    setRewatchStart('');
+    setRewatchEnd('');
   };
 
   if (loading) return (
@@ -205,6 +259,18 @@ export function ShowDetail() {
                   {s.label}
                 </button>
               ))}
+              {tracked && tracked.watchedEpisodes.length > 0 && (
+                <button
+                  onClick={() => setRewatchPanel((v) => !v)}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-medium border transition ${
+                    rewatchPanel
+                      ? 'bg-brand/15 border-brand/30 text-brand'
+                      : 'bg-zinc-800 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-700'
+                  }`}
+                >
+                  <RefreshCw size={13} /> Rewatch
+                </button>
+              )}
               <button
                 onClick={() => inList ? removeFromWatchlist(showId, 'tv') : addToWatchlist(showId, 'tv')}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-medium border transition ${
@@ -227,6 +293,42 @@ export function ShowDetail() {
                 {inFavorites ? 'Favorited' : 'Favorite'}
               </button>
             </div>
+
+            {rewatchPanel && (
+              <div className="flex items-center gap-2 flex-wrap bg-zinc-800/60 border border-white/5 rounded-xl px-4 py-3">
+                <span className="text-zinc-400 text-xs w-full mb-1">Rewatch — spread all watched episodes between:</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="date"
+                    value={rewatchStart}
+                    max={rewatchEnd || todayStr()}
+                    onChange={(e) => setRewatchStart(e.target.value)}
+                    placeholder="Start"
+                    className="bg-zinc-700 text-white text-xs px-2.5 py-1.5 rounded-lg border border-white/5 focus:border-brand/50 focus:outline-none"
+                  />
+                  <span className="text-zinc-600 text-xs">→</span>
+                  <input
+                    type="date"
+                    value={rewatchEnd}
+                    min={rewatchStart}
+                    max={todayStr()}
+                    onChange={(e) => setRewatchEnd(e.target.value)}
+                    placeholder="End"
+                    className="bg-zinc-700 text-white text-xs px-2.5 py-1.5 rounded-lg border border-white/5 focus:border-brand/50 focus:outline-none"
+                  />
+                  <button
+                    onClick={confirmRewatchShow}
+                    disabled={!rewatchStart || !rewatchEnd}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand text-black text-xs font-medium disabled:opacity-40 transition"
+                  >
+                    <Check size={12} /> Confirm
+                  </button>
+                  <button onClick={() => setRewatchPanel(false)} className="p-1.5 rounded-lg bg-zinc-700 text-white transition">
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {watchedCount > 0 && (
               <div className="flex items-center gap-3 bg-zinc-800/60 border border-white/5 rounded-xl px-4 py-2.5 w-fit text-sm">
@@ -283,8 +385,10 @@ export function ShowDetail() {
                         seasonNumber={season.season_number}
                         watched={hasWatchedEpisode(showId, season.season_number, ep.episode_number)}
                         watchedAt={episodeWatchedAt(season.season_number, ep.episode_number)}
+                        rewatchDates={episodeRewatchDates(season.season_number, ep.episode_number)}
                         onLog={(sn, en, date) => logEpisodeAndCheck(sn, en, date)}
                         onUnlog={(sn, en) => unlogEpisode(showId, sn, en)}
+                        onRewatch={(sn, en, date) => logEpisodeRewatch(showId, sn, en, date)}
                       />
                     ))}
                   </div>

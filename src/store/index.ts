@@ -16,6 +16,8 @@ interface State {
   setShowStatus: (id: number, status: TrackedShow['status']) => void;
   logEpisode: (showId: number, entry: Omit<EpisodeEntry, 'watchedAt'>, watchedAt?: string) => void;
   unlogEpisode: (showId: number, season: number, episode: number) => void;
+  logEpisodeRewatch: (showId: number, season: number, episode: number, watchedAt: string) => void;
+  rewatchShow: (showId: number, episodes: Array<{ season: number; episode: number }>, dates: string[]) => void;
 
   addToWatchlist: (id: number, type: MediaType) => void;
   removeFromWatchlist: (id: number, type: MediaType) => void;
@@ -175,6 +177,37 @@ export const useStore = create<State>()(
         get().shows[showId]?.watchedEpisodes.filter(
           (e) => e.seasonNumber === season && e.episodeNumber === episode
         ).length ?? 0,
+
+      logEpisodeRewatch: (showId, season, episode, watchedAt) =>
+        set((s) => {
+          const show = s.shows[showId];
+          if (!show) return s;
+          return {
+            shows: {
+              ...s.shows,
+              [showId]: {
+                ...show,
+                watchedEpisodes: show.watchedEpisodes.map((e) =>
+                  e.seasonNumber === season && e.episodeNumber === episode
+                    ? { ...e, rewatchDates: [...(e.rewatchDates ?? []), watchedAt] }
+                    : e
+                ),
+              },
+            },
+          };
+        }),
+
+      rewatchShow: (showId, episodes, dates) =>
+        set((s) => {
+          const show = s.shows[showId];
+          if (!show) return s;
+          const updated = show.watchedEpisodes.map((e) => {
+            const idx = episodes.findIndex((ep) => ep.season === e.seasonNumber && ep.episode === e.episodeNumber);
+            if (idx === -1) return e;
+            return { ...e, rewatchDates: [...(e.rewatchDates ?? []), dates[idx]] };
+          });
+          return { shows: { ...s.shows, [showId]: { ...show, watchedEpisodes: updated } } };
+        }),
 
       hideFromContinueWatching: (id) =>
         set((s) => ({

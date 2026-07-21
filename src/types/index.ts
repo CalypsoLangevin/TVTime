@@ -60,6 +60,7 @@ export interface EpisodeEntry {
   seasonNumber: number;
   episodeNumber: number;
   watchedAt: string;
+  rewatchDates?: string[];
 }
 
 export interface WatchlistEntry {
