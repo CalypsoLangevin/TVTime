@@ -23,6 +23,20 @@ export function useAuth() {
 }
 
 function currentStoreSnapshot() {
+  // Read directly from localStorage to avoid Zustand persist hydration timing issues
+  try {
+    const raw = localStorage.getItem('queued-store');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const state = parsed.state ?? parsed;
+      return {
+        movies: state.movies ?? {},
+        shows: state.shows ?? {},
+        watchlist: state.watchlist ?? [],
+        favorites: state.favorites ?? [],
+      };
+    }
+  } catch {}
   const s = useStore.getState();
   return { movies: s.movies, shows: s.shows, watchlist: s.watchlist, favorites: s.favorites };
 }
