@@ -22,24 +22,22 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function currentStoreSnapshot() {
+  const s = useStore.getState();
+  return { movies: s.movies, shows: s.shows, watchlist: s.watchlist, favorites: s.favorites };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstLoadRef = useRef(true);
 
   const scheduleSync = useCallback((tok: string) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      const state = useStore.getState();
       try {
-        await saveToGist(tok, {
-          movies: state.movies,
-          shows: state.shows,
-          watchlist: state.watchlist,
-          favorites: state.favorites,
-        });
+        await saveToGist(tok, currentStoreSnapshot());
       } catch {
         // silent — next change will retry
       }
@@ -67,9 +65,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveToken(tok);
     try {
       const remote = await loadFromGist(tok);
-      if (remote) applyGistState(remote);
+      if (remote) {
+        // Remote has data — apply it (phone loading desktop data)
+        applyGistState(remote);
+      } else {
+        // Remote is empty — upload whatever is in localStorage right now
+        await saveToGist(tok, currentStoreSnapshot());
+      }
     } catch {
-      // no remote data yet — start fresh
+      // proceed even if sync fails
     }
     setToken(tok);
     setLoading(false);
@@ -99,13 +103,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [applyGistState]);
 
-  // Subscribe to store changes and sync to Gist (skip the initial hydration)
+  // Subscribe to store changes and sync to Gist
   useEffect(() => {
     if (!token) return;
-    const unsub = useStore.subscribe(() => {
-      if (isFirstLoadRef.current) { isFirstLoadRef.current = false; return; }
-      scheduleSync(token);
-    });
+    const unsub = useStore.subscribe(() => scheduleSync(token));
     return unsub;
   }, [token, scheduleSync]);
 
