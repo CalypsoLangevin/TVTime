@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Tv, Film, Bookmark, BarChart3, Search, Upload, LogOut } from 'lucide-react';
+import { Tv, Film, Bookmark, BarChart3, Search, Upload, LogOut, Cloud, CloudOff, Loader } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 
 const links = [
@@ -13,6 +13,34 @@ const links = [
 const desktopExtra = [
   { to: '/import', label: 'Import', icon: Upload },
 ];
+
+function SyncIndicator() {
+  const { syncStatus, token } = useAuth();
+  if (!token) return null;
+
+  if (syncStatus === 'saving') {
+    return (
+      <span title="Saving…" className="text-zinc-500 animate-spin">
+        <Loader size={14} />
+      </span>
+    );
+  }
+  if (syncStatus === 'error') {
+    return (
+      <span title="Sync failed — will retry on next change" className="text-red-400">
+        <CloudOff size={14} />
+      </span>
+    );
+  }
+  if (syncStatus === 'saved') {
+    return (
+      <span title="Synced" className="text-zinc-600">
+        <Cloud size={14} />
+      </span>
+    );
+  }
+  return null;
+}
 
 export function Navbar() {
   const { pathname } = useLocation();
@@ -42,6 +70,7 @@ export function Navbar() {
             </Link>
           ))}
           <div className="flex-1" />
+          <SyncIndicator />
           {desktopExtra.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}

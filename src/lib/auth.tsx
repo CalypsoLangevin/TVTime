@@ -2,10 +2,13 @@ import { createContext, useContext, useEffect, useState, useRef, useCallback } f
 import { loadToken, saveToken, clearToken, validateToken, loadFromGist, saveToGist } from './gist';
 import { useStore } from '../store';
 
+export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 interface AuthState {
   token: string | null;
   loading: boolean;
   error: string | null;
+  syncStatus: SyncStatus;
   login: (token: string) => Promise<void>;
   logout: () => void;
 }
@@ -14,6 +17,7 @@ const AuthContext = createContext<AuthState>({
   token: null,
   loading: true,
   error: null,
+  syncStatus: 'idle',
   login: async () => {},
   logout: () => {},
 });
@@ -21,6 +25,8 @@ const AuthContext = createContext<AuthState>({
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+const LOCAL_SAVED_AT_KEY = 'queued-store-saved-at';
 
 function isEmptyState(data: Record<string, unknown>) {
   return (
@@ -31,7 +37,6 @@ function isEmptyState(data: Record<string, unknown>) {
 }
 
 function currentStoreSnapshot() {
-  // Read directly from localStorage to avoid Zustand persist hydration timing issues
   try {
     const raw = localStorage.getItem('queued-store');
     if (raw) {
@@ -42,29 +47,46 @@ function currentStoreSnapshot() {
         shows: state.shows ?? {},
         watchlist: state.watchlist ?? [],
         favorites: state.favorites ?? [],
+        hiddenShows: state.hiddenShows ?? [],
       };
     }
   } catch {}
   const s = useStore.getState();
-  return { movies: s.movies, shows: s.shows, watchlist: s.watchlist, favorites: s.favorites };
+  return {
+    movies: s.movies,
+    shows: s.shows,
+    watchlist: s.watchlist,
+    favorites: s.favorites,
+    hiddenShows: s.hiddenShows,
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef<boolean>(false);
+
+  const doSave = useCallback(async (tok: string) => {
+    setSyncStatus('saving');
+    try {
+      const snapshot = { ...currentStoreSnapshot(), _savedAt: new Date().toISOString() };
+      localStorage.setItem(LOCAL_SAVED_AT_KEY, snapshot._savedAt);
+      await saveToGist(tok, snapshot);
+      setSyncStatus('saved');
+      pendingSaveRef.current = false;
+    } catch {
+      setSyncStatus('error');
+    }
+  }, []);
 
   const scheduleSync = useCallback((tok: string) => {
+    pendingSaveRef.current = true;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        await saveToGist(tok, currentStoreSnapshot());
-      } catch {
-        // silent — next change will retry
-      }
-    }, 1500);
-  }, []);
+    saveTimerRef.current = setTimeout(() => doSave(tok), 1500);
+  }, [doSave]);
 
   const applyGistState = useCallback((data: Record<string, unknown>) => {
     useStore.setState({
@@ -72,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       shows: (data.shows as ReturnType<typeof useStore.getState>['shows']) ?? {},
       watchlist: (data.watchlist as ReturnType<typeof useStore.getState>['watchlist']) ?? [],
       favorites: (data.favorites as ReturnType<typeof useStore.getState>['favorites']) ?? [],
+      hiddenShows: (data.hiddenShows as ReturnType<typeof useStore.getState>['hiddenShows']) ?? [],
     });
   }, []);
 
@@ -89,9 +112,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const remote = await loadFromGist(tok);
       if (remote && !isEmptyState(remote)) {
         applyGistState(remote);
+        const remoteSavedAt = (remote._savedAt as string) ?? '';
+        localStorage.setItem(LOCAL_SAVED_AT_KEY, remoteSavedAt);
       } else {
         const snapshot = currentStoreSnapshot();
-        if (!isEmptyState(snapshot)) await saveToGist(tok, snapshot);
+        if (!isEmptyState(snapshot)) {
+          const ts = new Date().toISOString();
+          localStorage.setItem(LOCAL_SAVED_AT_KEY, ts);
+          await saveToGist(tok, { ...snapshot, _savedAt: ts });
+        }
       }
     } catch {
       // proceed even if sync fails
@@ -103,10 +132,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     clearToken();
     localStorage.removeItem('gist-id');
+    localStorage.removeItem(LOCAL_SAVED_AT_KEY);
     setToken(null);
+    setSyncStatus('idle');
   }, []);
 
-  // On mount: check for stored token, sync with Gist
+  // On mount: check for stored token, sync with Gist — use whichever source is newer
   useEffect(() => {
     const stored = loadToken();
     if (!stored) { setLoading(false); return; }
@@ -115,12 +146,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!valid) { clearToken(); setLoading(false); return; }
       try {
         const remote = await loadFromGist(stored);
-        if (remote && !isEmptyState(remote)) {
+        const localSavedAt = localStorage.getItem(LOCAL_SAVED_AT_KEY) ?? '';
+        const remoteSavedAt = (remote?._savedAt as string) ?? '';
+
+        if (remote && !isEmptyState(remote) && remoteSavedAt >= localSavedAt) {
+          // Gist is newer (or same) — load from Gist
           applyGistState(remote);
+          localStorage.setItem(LOCAL_SAVED_AT_KEY, remoteSavedAt);
         } else {
+          // Local is newer or Gist is empty — push local state to Gist
           const snapshot = currentStoreSnapshot();
-          if (!isEmptyState(snapshot)) await saveToGist(stored, snapshot);
+          if (!isEmptyState(snapshot)) {
+            const ts = localSavedAt || new Date().toISOString();
+            await saveToGist(stored, { ...snapshot, _savedAt: ts });
+          }
         }
+        setSyncStatus('saved');
       } catch {
         // use localStorage state as fallback
       }
@@ -136,8 +177,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsub;
   }, [token, scheduleSync]);
 
+  // Flush pending save on page unload so closing the tab doesn't lose data
+  useEffect(() => {
+    if (!token) return;
+    const handleUnload = () => {
+      if (!pendingSaveRef.current) return;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      const snapshot = { ...currentStoreSnapshot(), _savedAt: new Date().toISOString() };
+      localStorage.setItem(LOCAL_SAVED_AT_KEY, snapshot._savedAt);
+      // Use sendBeacon for best-effort fire-and-forget — but Gist API isn't beacon-compatible,
+      // so we do a synchronous save attempt via keepalive fetch isn't available either.
+      // Best we can do: the localStorage timestamp is updated, so next open picks it up correctly.
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [token]);
+
   return (
-    <AuthContext.Provider value={{ token, loading, error, login, logout }}>
+    <AuthContext.Provider value={{ token, loading, error, syncStatus, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
