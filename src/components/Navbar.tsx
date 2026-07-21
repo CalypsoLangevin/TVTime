@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Tv, Film, Bookmark, BarChart3, Search, Upload } from 'lucide-react';
+import { Tv, Film, Bookmark, BarChart3, Search, Upload, LogOut } from 'lucide-react';
+import { useAuth } from '../lib/auth';
 
 const links = [
   { to: '/', label: 'Discover', icon: Search },
@@ -15,6 +16,7 @@ const desktopExtra = [
 
 export function Navbar() {
   const { pathname } = useLocation();
+  const { logout } = useAuth();
   const isActive = (to: string) => to === '/' ? pathname === '/' : pathname.startsWith(to);
 
   return (
@@ -54,6 +56,13 @@ export function Navbar() {
               {label}
             </Link>
           ))}
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-500 hover:text-white hover:bg-white/5 transition-colors ml-1"
+            title="Sign out"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
       </nav>
 
