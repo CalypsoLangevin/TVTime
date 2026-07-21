@@ -14,7 +14,7 @@ interface State {
 
   addShow: (show: TrackedShow) => void;
   setShowStatus: (id: number, status: TrackedShow['status']) => void;
-  logEpisode: (showId: number, entry: Omit<EpisodeEntry, 'watchedAt'>) => void;
+  logEpisode: (showId: number, entry: Omit<EpisodeEntry, 'watchedAt'>, watchedAt?: string) => void;
   unlogEpisode: (showId: number, season: number, episode: number) => void;
 
   addToWatchlist: (id: number, type: MediaType) => void;
@@ -95,7 +95,7 @@ export const useStore = create<State>()(
           shows: { ...s.shows, [id]: { ...s.shows[id], status } },
         })),
 
-      logEpisode: (showId, entry) =>
+      logEpisode: (showId, entry, watchedAt?) =>
         set((s) => {
           const show = s.shows[showId];
           if (!show) return s;
@@ -108,7 +108,7 @@ export const useStore = create<State>()(
                 ...show,
                 watchedEpisodes: [
                   ...show.watchedEpisodes,
-                  { ...entry, watchedAt: new Date().toISOString() },
+                  { ...entry, watchedAt: watchedAt ?? new Date().toISOString() },
                 ],
               },
             },

@@ -1,9 +1,74 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Eye, EyeOff, Bookmark, BookmarkCheck, Heart, Star, CheckCheck } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Bookmark, BookmarkCheck, Heart, Star, CheckCheck, Check, X } from 'lucide-react';
 import { tmdb, posterUrl, backdropUrl } from '../lib/tmdb';
 import { useStore } from '../store';
 import type { TMDBEpisode, TMDBShowDetails } from '../types';
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+interface EpisodeRowProps {
+  ep: TMDBEpisode;
+  showId: number;
+  seasonNumber: number;
+  watched: boolean;
+  watchedAt: string | undefined;
+  onLog: (seasonNumber: number, episodeNumber: number, date: string) => void;
+  onUnlog: (seasonNumber: number, episodeNumber: number) => void;
+}
+
+function EpisodeRow({ ep, seasonNumber, watched, watchedAt, onLog, onUnlog }: EpisodeRowProps) {
+  const [picking, setPicking] = useState(false);
+  const [date, setDate] = useState(todayStr());
+
+  const confirm = () => {
+    onLog(seasonNumber, ep.episode_number, new Date(date).toISOString());
+    setPicking(false);
+    setDate(todayStr());
+  };
+
+  return (
+    <div className="border-t border-white/5">
+      <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition">
+        <span className="text-zinc-600 text-xs w-5 shrink-0 text-right">{ep.episode_number}</span>
+        <span className={`flex-1 text-sm ${watched ? 'text-white' : 'text-zinc-400'}`}>{ep.name}</span>
+        {watchedAt
+          ? <span className="hidden sm:inline text-brand/70 text-xs">{new Date(watchedAt).toLocaleDateString()}</span>
+          : ep.air_date && <span className="hidden sm:inline text-zinc-600 text-xs">{ep.air_date?.slice(0, 10)}</span>
+        }
+        {ep.runtime && <span className="text-zinc-600 text-xs">{ep.runtime}m</span>}
+        <button
+          onClick={() => watched ? onUnlog(seasonNumber, ep.episode_number) : setPicking(true)}
+          className={`p-1.5 rounded-full transition shrink-0 ${
+            watched ? 'bg-brand text-black' : 'bg-zinc-700 text-zinc-400 hover:text-white'
+          }`}
+        >
+          {watched ? <Eye size={13} /> : <EyeOff size={13} />}
+        </button>
+      </div>
+      {picking && (
+        <div className="flex items-center gap-2 px-4 pb-3 flex-wrap">
+          <span className="text-zinc-400 text-xs">Watched on</span>
+          <input
+            type="date"
+            value={date}
+            max={todayStr()}
+            onChange={(e) => setDate(e.target.value)}
+            className="bg-zinc-700 text-white text-xs px-2.5 py-1.5 rounded-lg border border-white/5 focus:border-brand/50 focus:outline-none"
+          />
+          <button onClick={confirm} className="p-1.5 rounded-lg bg-brand text-black transition" title="Confirm">
+            <Check size={12} />
+          </button>
+          <button onClick={() => setPicking(false)} className="p-1.5 rounded-lg bg-zinc-700 text-white transition" title="Cancel">
+            <X size={12} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ShowDetail() {
   const { id } = useParams<{ id: string }>();
@@ -189,33 +254,18 @@ export function ShowDetail() {
                         <CheckCheck size={13} /> {allWatched ? 'Unmark all' : 'Mark all watched'}
                       </button>
                     </div>
-                    {eps.map((ep) => {
-                      const watched = hasWatchedEpisode(showId, season.season_number, ep.episode_number);
-                      const watchedAt = watched ? episodeWatchedAt(season.season_number, ep.episode_number) : undefined;
-                      return (
-                        <div key={ep.id} className="flex items-center gap-3 px-4 py-3 border-t border-white/5 hover:bg-white/3 transition">
-                          <span className="text-zinc-600 text-xs w-5 shrink-0 text-right">{ep.episode_number}</span>
-                          <span className={`flex-1 text-sm ${watched ? 'text-white' : 'text-zinc-400'}`}>{ep.name}</span>
-                          {watchedAt
-                            ? <span className="hidden sm:inline text-brand/70 text-xs">{new Date(watchedAt).toLocaleDateString()}</span>
-                            : ep.air_date && <span className="hidden sm:inline text-zinc-600 text-xs">{ep.air_date?.slice(0, 10)}</span>
-                          }
-                          {ep.runtime && <span className="text-zinc-600 text-xs">{ep.runtime}m</span>}
-                          <button
-                            onClick={() => watched
-                              ? unlogEpisode(showId, season.season_number, ep.episode_number)
-                              : logEpisode(showId, { seasonNumber: season.season_number, episodeNumber: ep.episode_number })}
-                            className={`p-1.5 rounded-full transition shrink-0 ${
-                              watched
-                                ? 'bg-brand text-black'
-                                : 'bg-zinc-700 text-zinc-400 hover:text-white'
-                            }`}
-                          >
-                            {watched ? <Eye size={13} /> : <EyeOff size={13} />}
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {eps.map((ep) => (
+                      <EpisodeRow
+                        key={ep.id}
+                        ep={ep}
+                        showId={showId}
+                        seasonNumber={season.season_number}
+                        watched={hasWatchedEpisode(showId, season.season_number, ep.episode_number)}
+                        watchedAt={episodeWatchedAt(season.season_number, ep.episode_number)}
+                        onLog={(sn, en, date) => logEpisode(showId, { seasonNumber: sn, episodeNumber: en }, date)}
+                        onUnlog={(sn, en) => unlogEpisode(showId, sn, en)}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
