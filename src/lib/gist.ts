@@ -53,20 +53,51 @@ async function findOrCreateGist(token: string): Promise<string> {
 }
 
 export async function loadFromGist(token: string): Promise<Record<string, unknown> | null> {
-  const gistId = await findOrCreateGist(token);
-  const { data } = await octokit(token).rest.gists.get({ gist_id: gistId });
-  const content = data.files?.[GIST_FILENAME]?.content;
-  if (!content || content === '{}') return null;
-  return JSON.parse(content);
+  let gistId = await findOrCreateGist(token);
+  try {
+    const { data } = await octokit(token).rest.gists.get({ gist_id: gistId });
+    const content = data.files?.[GIST_FILENAME]?.content;
+    if (!content || content === '{}') return null;
+    return JSON.parse(content);
+  } catch (e: unknown) {
+    const status = (e as { status?: number })?.status;
+    if (status === 404) {
+      console.warn('[gist] 404 on load, clearing cached ID and retrying');
+      localStorage.removeItem(GIST_ID_KEY);
+      gistId = await findOrCreateGist(token);
+      const { data } = await octokit(token).rest.gists.get({ gist_id: gistId });
+      const content = data.files?.[GIST_FILENAME]?.content;
+      if (!content || content === '{}') return null;
+      return JSON.parse(content);
+    }
+    throw e;
+  }
 }
 
 export async function saveToGist(token: string, state: unknown): Promise<void> {
-  const gistId = await findOrCreateGist(token);
   const content = JSON.stringify(state);
-  console.log(`[gist] updating gist ${gistId}, content length: ${content.length}`);
-  const res = await octokit(token).rest.gists.update({
-    gist_id: gistId,
-    files: { [GIST_FILENAME]: { content } },
-  });
-  console.log(`[gist] update status: ${res.status}`);
+  console.log(`[gist] saving ${Math.round(content.length / 1024)}kb`);
+  let gistId = await findOrCreateGist(token);
+  try {
+    const res = await octokit(token).rest.gists.update({
+      gist_id: gistId,
+      files: { [GIST_FILENAME]: { content } },
+    });
+    console.log(`[gist] saved ok (status ${res.status})`);
+  } catch (e: unknown) {
+    const status = (e as { status?: number })?.status;
+    if (status === 404) {
+      // Cached gist ID is stale — clear it and create a fresh one
+      console.warn('[gist] 404 on update, clearing cached ID and retrying');
+      localStorage.removeItem(GIST_ID_KEY);
+      gistId = await findOrCreateGist(token);
+      await octokit(token).rest.gists.update({
+        gist_id: gistId,
+        files: { [GIST_FILENAME]: { content } },
+      });
+      console.log('[gist] retry saved ok');
+    } else {
+      throw e;
+    }
+  }
 }
