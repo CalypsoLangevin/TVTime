@@ -52,6 +52,7 @@ export const useStore = create<State>()(
                 watchDates: [...prevDates, date],
               },
             },
+            watchlist: s.watchlist.filter((w) => !(w.mediaId === movie.id && w.mediaType === 'movie')),
           };
         }),
 

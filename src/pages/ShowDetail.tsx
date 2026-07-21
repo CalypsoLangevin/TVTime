@@ -83,6 +83,14 @@ export function ShowDetail() {
   const episodeWatchedAt = (sn: number, en: number) =>
     tracked?.watchedEpisodes.find((e) => e.seasonNumber === sn && e.episodeNumber === en)?.watchedAt;
   const inList = isInWatchlist(showId, 'tv');
+
+  const logEpisodeAndCheck = (sn: number, en: number, date?: string) => {
+    logEpisode(showId, { seasonNumber: sn, episodeNumber: en }, date);
+    if (!detail) return;
+    const totalEps = detail.seasons.reduce((acc, s) => acc + (s.season_number > 0 ? s.episode_count : 0), 0);
+    const watchedAfter = (tracked?.watchedEpisodes.length ?? 0) + 1;
+    if (watchedAfter >= totalEps) removeFromWatchlist(showId, 'tv');
+  };
   const inFavorites = isInFavorites(showId, 'tv');
 
   useEffect(() => {
@@ -109,7 +117,7 @@ export function ShowDetail() {
 
   const markSeasonAll = (seasonNumber: number, eps: TMDBEpisode[], watched: boolean) => {
     eps.forEach((ep) => {
-      if (watched) logEpisode(showId, { seasonNumber, episodeNumber: ep.episode_number });
+      if (watched) logEpisodeAndCheck(seasonNumber, ep.episode_number);
       else unlogEpisode(showId, seasonNumber, ep.episode_number);
     });
   };
@@ -262,7 +270,7 @@ export function ShowDetail() {
                         seasonNumber={season.season_number}
                         watched={hasWatchedEpisode(showId, season.season_number, ep.episode_number)}
                         watchedAt={episodeWatchedAt(season.season_number, ep.episode_number)}
-                        onLog={(sn, en, date) => logEpisode(showId, { seasonNumber: sn, episodeNumber: en }, date)}
+                        onLog={(sn, en, date) => logEpisodeAndCheck(sn, en, date)}
                         onUnlog={(sn, en) => unlogEpisode(showId, sn, en)}
                       />
                     ))}
