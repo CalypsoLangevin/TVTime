@@ -41,6 +41,9 @@ export const tmdb = {
   season: (showId: number, seasonNumber: number) =>
     get<{ episodes: import('../types').TMDBEpisode[] }>(`/tv/${showId}/season/${seasonNumber}`),
 
+  upcomingEpisode: (showId: number) =>
+    get<{ next_episode_to_air: import('../types').TMDBEpisode & { air_date: string } | null; last_episode_to_air: import('../types').TMDBEpisode | null }>(`/tv/${showId}`),
+
   trendingMovies: () =>
     get<{ results: import('../types').TMDBMovie[] }>('/trending/movie/week'),
 
