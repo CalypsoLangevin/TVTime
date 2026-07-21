@@ -129,17 +129,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // On mount: if a token is stored, always load from Gist — it's the source of truth
   useEffect(() => {
     const stored = loadToken();
+    console.log('[auth] mount — token in storage:', stored ? 'yes' : 'no');
     if (!stored) { setLoading(false); return; }
     (async () => {
+      console.log('[auth] validating token…');
       const valid = await validateToken(stored);
+      console.log('[auth] token valid:', valid);
       if (!valid) { clearToken(); setLoading(false); return; }
       try {
+        console.log('[auth] loading from Gist…');
         const remote = await loadFromGist(stored);
+        console.log('[auth] gist loaded, empty?', !remote || isEmptyState(remote));
         if (remote && !isEmptyState(remote)) {
           applyGistState(remote);
         }
         setSyncStatus('saved');
-      } catch {
+      } catch (e) {
+        console.error('[auth] load failed:', e);
         setSyncStatus('error');
       }
       setToken(stored);
