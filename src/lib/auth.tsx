@@ -22,6 +22,14 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function isEmptyState(data: Record<string, unknown>) {
+  return (
+    Object.keys((data.movies as object) ?? {}).length === 0 &&
+    Object.keys((data.shows as object) ?? {}).length === 0 &&
+    ((data.watchlist as unknown[]) ?? []).length === 0
+  );
+}
+
 function currentStoreSnapshot() {
   // Read directly from localStorage to avoid Zustand persist hydration timing issues
   try {
@@ -79,15 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveToken(tok);
     try {
       const remote = await loadFromGist(tok);
-      if (remote) {
+      if (remote && !isEmptyState(remote)) {
         applyGistState(remote);
       } else {
-        // Remote is empty — only upload if this device actually has data
         const snapshot = currentStoreSnapshot();
-        const hasData = Object.keys(snapshot.movies).length > 0 ||
-          Object.keys(snapshot.shows).length > 0 ||
-          snapshot.watchlist.length > 0;
-        if (hasData) await saveToGist(tok, snapshot);
+        if (!isEmptyState(snapshot)) await saveToGist(tok, snapshot);
       }
     } catch {
       // proceed even if sync fails
@@ -111,15 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!valid) { clearToken(); setLoading(false); return; }
       try {
         const remote = await loadFromGist(stored);
-        if (remote) {
+        if (remote && !isEmptyState(remote)) {
           applyGistState(remote);
         } else {
-          // Gist is empty — push local data up (first login on this device uploaded nothing)
           const snapshot = currentStoreSnapshot();
-          const hasData = Object.keys(snapshot.movies).length > 0 ||
-            Object.keys(snapshot.shows).length > 0 ||
-            snapshot.watchlist.length > 0;
-          if (hasData) await saveToGist(stored, snapshot);
+          if (!isEmptyState(snapshot)) await saveToGist(stored, snapshot);
         }
       } catch {
         // use localStorage state as fallback
