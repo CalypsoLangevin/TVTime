@@ -45,6 +45,7 @@ export interface TMDBEpisode {
 export interface TMDBShowDetails extends TMDBShow {
   seasons: TMDBSeason[];
   episode_run_time: number[];
+  status?: string;
 }
 
 export interface WatchEntry {

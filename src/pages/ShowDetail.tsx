@@ -96,6 +96,7 @@ export function ShowDetail() {
   useEffect(() => {
     tmdb.show(showId).then((d) => {
       setDetail(d);
+      const tmdbStatus: string = d.status ?? '';
       addShow({
         id: d.id,
         name: d.name,
@@ -103,7 +104,7 @@ export function ShowDetail() {
         first_air_date: d.first_air_date,
         episode_run_time: d.episode_run_time,
         watchedEpisodes: [],
-        status: 'watching',
+        status: tmdbStatus === 'Ended' || tmdbStatus === 'Canceled' ? 'completed' : 'watching',
       });
     }).finally(() => setLoading(false));
   }, [showId]);
