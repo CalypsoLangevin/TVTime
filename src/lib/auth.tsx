@@ -26,8 +26,6 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-const LOCAL_SAVED_AT_KEY = 'queued-store-saved-at';
-
 function isEmptyState(data: Record<string, unknown>) {
   return (
     Object.keys((data.movies as object) ?? {}).length === 0 &&
@@ -37,20 +35,6 @@ function isEmptyState(data: Record<string, unknown>) {
 }
 
 function currentStoreSnapshot() {
-  try {
-    const raw = localStorage.getItem('queued-store');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const state = parsed.state ?? parsed;
-      return {
-        movies: state.movies ?? {},
-        shows: state.shows ?? {},
-        watchlist: state.watchlist ?? [],
-        favorites: state.favorites ?? [],
-        hiddenShows: state.hiddenShows ?? [],
-      };
-    }
-  } catch {}
   const s = useStore.getState();
   return {
     movies: s.movies,
@@ -61,42 +45,37 @@ function currentStoreSnapshot() {
   };
 }
 
+function applyGistState(data: Record<string, unknown>) {
+  useStore.setState({
+    movies: (data.movies as ReturnType<typeof useStore.getState>['movies']) ?? {},
+    shows: (data.shows as ReturnType<typeof useStore.getState>['shows']) ?? {},
+    watchlist: (data.watchlist as ReturnType<typeof useStore.getState>['watchlist']) ?? [],
+    favorites: (data.favorites as ReturnType<typeof useStore.getState>['favorites']) ?? [],
+    hiddenShows: (data.hiddenShows as ReturnType<typeof useStore.getState>['hiddenShows']) ?? [],
+  });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingSaveRef = useRef<boolean>(false);
 
   const doSave = useCallback(async (tok: string) => {
     setSyncStatus('saving');
     try {
-      const snapshot = { ...currentStoreSnapshot(), _savedAt: new Date().toISOString() };
-      localStorage.setItem(LOCAL_SAVED_AT_KEY, snapshot._savedAt);
-      await saveToGist(tok, snapshot);
+      await saveToGist(tok, currentStoreSnapshot());
       setSyncStatus('saved');
-      pendingSaveRef.current = false;
     } catch {
       setSyncStatus('error');
     }
   }, []);
 
   const scheduleSync = useCallback((tok: string) => {
-    pendingSaveRef.current = true;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => doSave(tok), 1500);
   }, [doSave]);
-
-  const applyGistState = useCallback((data: Record<string, unknown>) => {
-    useStore.setState({
-      movies: (data.movies as ReturnType<typeof useStore.getState>['movies']) ?? {},
-      shows: (data.shows as ReturnType<typeof useStore.getState>['shows']) ?? {},
-      watchlist: (data.watchlist as ReturnType<typeof useStore.getState>['watchlist']) ?? [],
-      favorites: (data.favorites as ReturnType<typeof useStore.getState>['favorites']) ?? [],
-      hiddenShows: (data.hiddenShows as ReturnType<typeof useStore.getState>['hiddenShows']) ?? [],
-    });
-  }, []);
 
   const login = useCallback(async (tok: string) => {
     setError(null);
@@ -111,33 +90,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const remote = await loadFromGist(tok);
       if (remote && !isEmptyState(remote)) {
+        // Gist has data — it's the source of truth, always load it
         applyGistState(remote);
-        const remoteSavedAt = (remote._savedAt as string) ?? '';
-        localStorage.setItem(LOCAL_SAVED_AT_KEY, remoteSavedAt);
       } else {
-        const snapshot = currentStoreSnapshot();
-        if (!isEmptyState(snapshot)) {
-          const ts = new Date().toISOString();
-          localStorage.setItem(LOCAL_SAVED_AT_KEY, ts);
-          await saveToGist(tok, { ...snapshot, _savedAt: ts });
-        }
+        // Gist is empty — push whatever is local so it's backed up
+        await saveToGist(tok, currentStoreSnapshot());
       }
+      setSyncStatus('saved');
     } catch {
       // proceed even if sync fails
     }
     setToken(tok);
     setLoading(false);
-  }, [applyGistState]);
+  }, []);
 
   const logout = useCallback(() => {
     clearToken();
     localStorage.removeItem('gist-id');
-    localStorage.removeItem(LOCAL_SAVED_AT_KEY);
     setToken(null);
     setSyncStatus('idle');
   }, []);
 
-  // On mount: check for stored token, sync with Gist — use whichever source is newer
+  // On mount: if a token is stored, always load from Gist — it's the source of truth
   useEffect(() => {
     const stored = loadToken();
     if (!stored) { setLoading(false); return; }
@@ -146,52 +120,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!valid) { clearToken(); setLoading(false); return; }
       try {
         const remote = await loadFromGist(stored);
-        const localSavedAt = localStorage.getItem(LOCAL_SAVED_AT_KEY) ?? '';
-        const remoteSavedAt = (remote?._savedAt as string) ?? '';
-
-        if (remote && !isEmptyState(remote) && remoteSavedAt >= localSavedAt) {
-          // Gist is newer (or same) — load from Gist
+        if (remote && !isEmptyState(remote)) {
           applyGistState(remote);
-          localStorage.setItem(LOCAL_SAVED_AT_KEY, remoteSavedAt);
-        } else {
-          // Local is newer or Gist is empty — push local state to Gist
-          const snapshot = currentStoreSnapshot();
-          if (!isEmptyState(snapshot)) {
-            const ts = localSavedAt || new Date().toISOString();
-            await saveToGist(stored, { ...snapshot, _savedAt: ts });
-          }
         }
         setSyncStatus('saved');
       } catch {
-        // use localStorage state as fallback
+        setSyncStatus('error');
       }
       setToken(stored);
       setLoading(false);
     })();
-  }, [applyGistState]);
+  }, []);
 
-  // Subscribe to store changes and sync to Gist
+  // Subscribe to store changes and sync to Gist after every change
   useEffect(() => {
     if (!token) return;
     const unsub = useStore.subscribe(() => scheduleSync(token));
     return unsub;
   }, [token, scheduleSync]);
-
-  // Flush pending save on page unload so closing the tab doesn't lose data
-  useEffect(() => {
-    if (!token) return;
-    const handleUnload = () => {
-      if (!pendingSaveRef.current) return;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      const snapshot = { ...currentStoreSnapshot(), _savedAt: new Date().toISOString() };
-      localStorage.setItem(LOCAL_SAVED_AT_KEY, snapshot._savedAt);
-      // Use sendBeacon for best-effort fire-and-forget — but Gist API isn't beacon-compatible,
-      // so we do a synchronous save attempt via keepalive fetch isn't available either.
-      // Best we can do: the localStorage timestamp is updated, so next open picks it up correctly.
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
-  }, [token]);
 
   return (
     <AuthContext.Provider value={{ token, loading, error, syncStatus, login, logout }}>
