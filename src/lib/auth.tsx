@@ -66,11 +66,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const remote = await loadFromGist(tok);
       if (remote) {
-        // Remote has data — apply it (phone loading desktop data)
         applyGistState(remote);
       } else {
-        // Remote is empty — upload whatever is in localStorage right now
-        await saveToGist(tok, currentStoreSnapshot());
+        // Remote is empty — only upload if this device actually has data
+        const snapshot = currentStoreSnapshot();
+        const hasData = Object.keys(snapshot.movies).length > 0 ||
+          Object.keys(snapshot.shows).length > 0 ||
+          snapshot.watchlist.length > 0;
+        if (hasData) await saveToGist(tok, snapshot);
       }
     } catch {
       // proceed even if sync fails
@@ -85,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
   }, []);
 
-  // On mount: check for stored token and load remote data
+  // On mount: check for stored token, sync with Gist
   useEffect(() => {
     const stored = loadToken();
     if (!stored) { setLoading(false); return; }
@@ -94,7 +97,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!valid) { clearToken(); setLoading(false); return; }
       try {
         const remote = await loadFromGist(stored);
-        if (remote) applyGistState(remote);
+        if (remote) {
+          applyGistState(remote);
+        } else {
+          // Gist is empty — push local data up (first login on this device uploaded nothing)
+          const snapshot = currentStoreSnapshot();
+          const hasData = Object.keys(snapshot.movies).length > 0 ||
+            Object.keys(snapshot.shows).length > 0 ||
+            snapshot.watchlist.length > 0;
+          if (hasData) await saveToGist(stored, snapshot);
+        }
       } catch {
         // use localStorage state as fallback
       }
