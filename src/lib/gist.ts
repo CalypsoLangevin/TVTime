@@ -52,11 +52,26 @@ async function findOrCreateGist(token: string): Promise<string> {
   return id;
 }
 
+async function fetchGistContent(token: string, gistId: string): Promise<string | null> {
+  const { data } = await octokit(token).rest.gists.get({ gist_id: gistId });
+  const file = data.files?.[GIST_FILENAME];
+  if (!file) return null;
+  // GitHub API truncates inline content at 1MB — fetch raw URL for large files
+  if (file.truncated && file.raw_url) {
+    console.log('[gist] content truncated, fetching via raw_url');
+    const res = await fetch(file.raw_url, {
+      headers: { Authorization: `token ${token}` },
+    });
+    if (!res.ok) throw new Error(`raw fetch ${res.status}`);
+    return res.text();
+  }
+  return file.content ?? null;
+}
+
 export async function loadFromGist(token: string): Promise<Record<string, unknown> | null> {
   let gistId = await findOrCreateGist(token);
   try {
-    const { data } = await octokit(token).rest.gists.get({ gist_id: gistId });
-    const content = data.files?.[GIST_FILENAME]?.content;
+    const content = await fetchGistContent(token, gistId);
     if (!content || content === '{}') return null;
     return JSON.parse(content);
   } catch (e: unknown) {
@@ -65,8 +80,7 @@ export async function loadFromGist(token: string): Promise<Record<string, unknow
       console.warn('[gist] 404 on load, clearing cached ID and retrying');
       localStorage.removeItem(GIST_ID_KEY);
       gistId = await findOrCreateGist(token);
-      const { data } = await octokit(token).rest.gists.get({ gist_id: gistId });
-      const content = data.files?.[GIST_FILENAME]?.content;
+      const content = await fetchGistContent(token, gistId);
       if (!content || content === '{}') return null;
       return JSON.parse(content);
     }
