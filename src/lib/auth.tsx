@@ -124,7 +124,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('gist-id');
     setToken(null);
     setSyncStatus('idle');
-  }, []);
+    // Clear local store so stale data doesn't show after logout
+    applyGistState({});
+  }, [applyGistState]);
 
   // On mount: if a token is stored, always load from Gist — it's the source of truth
   useEffect(() => {
