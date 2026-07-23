@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { useAuth } from '../lib/auth';
 import type { TrackedMovie, TrackedShow } from '../types';
+import { Cloud, CloudOff, Loader } from 'lucide-react';
 
 const BASE = 'https://api.themoviedb.org/3';
 const KEY = import.meta.env.VITE_TMDB_API_KEY ?? '';
@@ -110,9 +111,20 @@ export function Import() {
   const [progress, setProgress] = useState(0);
   const [total, setTotal] = useState(0);
   const [done, setDone] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const fileRef = useRef<HTMLInputElement>(null);
   const store = useStore();
   const { forceSync } = useAuth();
+
+  async function syncToGithub() {
+    setSyncStatus('saving');
+    try {
+      await forceSync();
+      setSyncStatus('saved');
+    } catch {
+      setSyncStatus('error');
+    }
+  }
 
   async function handleFile(file: File) {
     const text = await file.text();
@@ -195,7 +207,7 @@ export function Import() {
     }
 
     setRunning(false);
-    await forceSync();
+    await syncToGithub();
     setDone(true);
   }
 
@@ -288,7 +300,7 @@ export function Import() {
     }
 
     setRunning(false);
-    await forceSync();
+    await syncToGithub();
     setDone(true);
   }
 
@@ -333,10 +345,17 @@ export function Import() {
           </div>
 
           {done && (
-            <div className="flex gap-4 text-sm">
-              <span className="text-green-400">✓ {imported} imported</span>
-              {watchlisted > 0 && <span className="text-zinc-400">⊕ {watchlisted} to watchlist</span>}
-              <span className="text-red-400">✗ {skipped} skipped</span>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex gap-4 text-sm">
+                <span className="text-green-400">✓ {imported} imported</span>
+                {watchlisted > 0 && <span className="text-zinc-400">⊕ {watchlisted} to watchlist</span>}
+                <span className="text-red-400">✗ {skipped} skipped</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                {syncStatus === 'saving' && <><Loader size={14} className="animate-spin text-zinc-400" /><span className="text-zinc-400">Saving to GitHub…</span></>}
+                {syncStatus === 'saved' && <><Cloud size={14} className="text-green-400" /><span className="text-green-400">Saved to GitHub</span></>}
+                {syncStatus === 'error' && <><CloudOff size={14} className="text-red-400" /><span className="text-red-400">GitHub save failed — retry</span><button onClick={syncToGithub} className="underline text-red-400 hover:text-red-300">Retry</button></>}
+              </div>
             </div>
           )}
 
