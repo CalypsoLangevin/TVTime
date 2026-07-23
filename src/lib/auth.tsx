@@ -133,7 +133,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setRepo(null);
     setSyncStatus('idle');
-    applyState({});
   }, []);
 
   // On mount: restore session and load from repo
