@@ -247,9 +247,6 @@ export function Import() {
             showCache.set(tvdbId, null);
           } else {
             const details = await fetchShowDetails(found.id);
-            const tmdbStatus: string = details.status ?? '';
-            const showStatus: TrackedShow['status'] =
-              tmdbStatus === 'Ended' || tmdbStatus === 'Canceled' ? 'completed' : 'watching';
             const trackedShow: TrackedShow = {
               id: details.id,
               name: details.name,
@@ -257,7 +254,7 @@ export function Import() {
               first_air_date: details.first_air_date,
               episode_run_time: details.episode_run_time ?? [],
               watchedEpisodes: [],
-              status: showStatus,
+              status: 'watching',
             };
             showCache.set(tvdbId, trackedShow);
             // Register show in store if not already there

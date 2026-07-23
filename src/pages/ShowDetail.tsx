@@ -133,7 +133,6 @@ export function ShowDetail() {
   useEffect(() => {
     tmdb.show(showId).then((d) => {
       setDetail(d);
-      const tmdbStatus: string = d.status ?? '';
       const hasUpcoming = !!d.next_episode_to_air;
       addShow({
         id: d.id,
@@ -142,7 +141,7 @@ export function ShowDetail() {
         first_air_date: d.first_air_date,
         episode_run_time: d.episode_run_time,
         watchedEpisodes: [],
-        status: tmdbStatus === 'Ended' || tmdbStatus === 'Canceled' ? 'completed' : 'watching',
+        status: 'watching',
       });
       // If already tracked as completed but new episodes are coming, restore to watching
       const existing = useStore.getState().shows[showId];
