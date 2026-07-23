@@ -140,9 +140,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[auth] loading from Gist…');
         const remote = await loadFromGist(stored);
         console.log('[auth] gist loaded, empty?', !remote || isEmptyState(remote));
-        if (remote && !isEmptyState(remote)) {
-          applyGistState(remote);
-        }
+        // Always apply whatever the Gist has — including empty state.
+        // This ensures clearing on one device propagates to all others.
+        applyGistState(remote ?? {});
         setSyncStatus('saved');
       } catch (e) {
         console.error('[auth] load failed:', e);
