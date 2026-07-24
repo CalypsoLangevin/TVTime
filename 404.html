@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Redirect sub-routes back to the SPA entry point, preserving the path
+      var base = '/Cinema-Tracker';
+      var path = window.location.pathname.slice(base.length) || '/';
+      window.location.replace(
+        window.location.origin + base +
+        '/?r=' + encodeURIComponent(path + window.location.search) +
+        window.location.hash
+      );
+    </script>
+  </head>
+</html>
