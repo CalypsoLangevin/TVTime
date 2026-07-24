@@ -75,7 +75,11 @@ let saveChain: Promise<void> = Promise.resolve();
 let lastSavedJson = '';
 
 export async function saveToRepo(token: string, repo: string, state: unknown): Promise<void> {
-  saveChain = saveChain.then(() => doSaveOnce(token, repo, state));
+  // Chain saves so they run one at a time, but recover if one fails
+  // so the queue is never permanently broken
+  saveChain = saveChain
+    .catch(() => {}) // absorb previous failure so the next save still runs
+    .then(() => doSaveOnce(token, repo, state));
   return saveChain;
 }
 
@@ -87,8 +91,8 @@ async function doSaveOnce(token: string, repo: string, state: unknown): Promise<
 
   const content = btoa(unescape(encodeURIComponent(json)));
 
-  // Retry once on 409 (stale SHA)
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // Retry up to 3 times on 409 (stale SHA)
+  for (let attempt = 0; attempt < 3; attempt++) {
     const sha = await getCurrentSha(token, repo);
 
     const body: Record<string, unknown> = { message: 'Update Queued data', content };
@@ -105,12 +109,17 @@ async function doSaveOnce(token: string, repo: string, state: unknown): Promise<
       return;
     }
 
-    if (res.status === 409 && attempt === 0) {
-      console.warn('[sync] 409 conflict, retrying with fresh SHA…');
+    if (res.status === 409) {
+      console.warn(`[sync] 409 conflict (attempt ${attempt + 1}), retrying…`);
       continue;
     }
 
     const err = await res.json().catch(() => ({}));
+    // Clear lastSavedJson so next attempt retries even if content is the same
+    lastSavedJson = '';
     throw new Error(`GitHub ${res.status}: ${(err as { message?: string }).message ?? ''}`);
   }
+
+  lastSavedJson = '';
+  throw new Error('GitHub save failed after 3 attempts (SHA conflict)');
 }
