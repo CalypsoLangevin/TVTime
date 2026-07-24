@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveRepo(rep);
     try {
       const remote = await loadFromRepo(tok, rep);
-      applyState(remote ?? {});
+      if (remote && !isEmptyState(remote)) applyState(remote);
       setSyncStatus('saved');
     } catch (e) {
       console.error('[auth] load on login failed:', e);
@@ -155,11 +155,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[auth] loading from repo…');
         const remote = await loadFromRepo(tok, rep);
         console.log('[auth] loaded, empty?', !remote || isEmptyState(remote));
-        applyState(remote ?? {});
+        // Only overwrite local state if GitHub has real data
+        if (remote && !isEmptyState(remote)) applyState(remote);
         setSyncStatus('saved');
       } catch (e) {
         console.error('[auth] load failed:', e);
         setSyncStatus('error');
+        // On load failure, keep whatever is in local store — do not wipe it
       }
       setToken(tok);
       setRepo(rep);
