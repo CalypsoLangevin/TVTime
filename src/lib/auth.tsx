@@ -166,11 +166,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(tok);
       setRepo(rep);
       setLoading(false);
-      // Rewrite the file immediately so it gets the latest format
-      const snapshot = currentStoreSnapshot();
-      if (!isEmptyState(snapshot)) {
-        doSave(tok, rep);
-      }
     })();
   }, []);
 

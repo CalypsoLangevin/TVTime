@@ -57,19 +57,22 @@ export async function loadFromRepo(token: string, repo: string): Promise<Record<
 
 // Serialize all saves — never run two concurrently (prevents SHA conflicts)
 let saveChain: Promise<void> = Promise.resolve();
+let lastSavedJson = '';
 
 export async function saveToRepo(token: string, repo: string, state: unknown): Promise<void> {
-  // Chain onto the previous save so they run one at a time
   saveChain = saveChain.then(() => doSaveOnce(token, repo, state));
   return saveChain;
 }
 
 async function doSaveOnce(token: string, repo: string, state: unknown): Promise<void> {
-  // Pretty-print so the file is readable on GitHub
   const json = JSON.stringify(state, null, 2);
+
+  // Skip if nothing changed since last successful save
+  if (json === lastSavedJson) return;
+
   const content = btoa(unescape(encodeURIComponent(json)));
 
-  // Retry once on 409 (stale SHA — can happen when saves race)
+  // Retry once on 409 (stale SHA)
   for (let attempt = 0; attempt < 2; attempt++) {
     const sha = await getCurrentSha(token, repo);
 
@@ -82,10 +85,12 @@ async function doSaveOnce(token: string, repo: string, state: unknown): Promise<
       body: JSON.stringify(body),
     });
 
-    if (res.ok) return;
+    if (res.ok) {
+      lastSavedJson = json;
+      return;
+    }
 
     if (res.status === 409 && attempt === 0) {
-      // Stale SHA — refetch and retry
       console.warn('[sync] 409 conflict, retrying with fresh SHA…');
       continue;
     }
