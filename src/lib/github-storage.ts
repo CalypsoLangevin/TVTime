@@ -84,7 +84,7 @@ export async function saveToRepo(token: string, repo: string, state: unknown): P
 }
 
 async function doSaveOnce(token: string, repo: string, state: unknown): Promise<void> {
-  const json = JSON.stringify(state);
+  const json = JSON.stringify(state, null, 2);
 
   // Skip if nothing changed since last successful save
   if (json === lastSavedJson) return;
