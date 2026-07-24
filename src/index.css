@@ -19,3 +19,30 @@ body {
   background-color: #0D1F26;
   color: #D4E8EE;
 }
+
+/* Light mode overrides */
+html.light {
+  --color-zinc-950: #F0F4F5;
+  --color-zinc-900: #E2ECEF;
+  --color-zinc-800: #D0E2E8;
+  --color-zinc-700: #B8D0D8;
+  --color-zinc-600: #8AADB8;
+}
+
+html.light body {
+  background-color: #E2ECEF;
+  color: #0D1F26;
+}
+
+html.light .text-white { color: #0D1F26; }
+html.light .text-zinc-300 { color: #1A3540; }
+html.light .text-zinc-400 { color: #254A5A; }
+html.light .text-zinc-500 { color: #3A6070; }
+html.light .text-zinc-600 { color: #4A7A8A; }
+
+/* Light mode nav/card overrides */
+html.light nav { background-color: rgba(225, 236, 239, 0.85) !important; border-color: rgba(0,0,0,0.08) !important; }
+html.light .bg-\[#0D1F26\]\/80 { background-color: rgba(225, 236, 239, 0.85) !important; }
+html.light .bg-\[#0D1F26\]\/90 { background-color: rgba(225, 236, 239, 0.92) !important; }
+html.light .from-\[#0D1F26\] { --tw-gradient-from: #E2ECEF; }
+html.light .via-\[#0D1F26\]\/60 { --tw-gradient-via: rgba(226,236,239,0.6); }

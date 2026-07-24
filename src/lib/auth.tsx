@@ -51,6 +51,7 @@ function currentStoreSnapshot() {
     watchlist: s.watchlist,
     favorites: s.favorites,
     hiddenShows: s.hiddenShows,
+    theme: s.theme,
   };
 }
 
@@ -61,6 +62,7 @@ function applyState(data: Record<string, unknown>) {
     watchlist: (data.watchlist as ReturnType<typeof useStore.getState>['watchlist']) ?? [],
     favorites: (data.favorites as ReturnType<typeof useStore.getState>['favorites']) ?? [],
     hiddenShows: (data.hiddenShows as ReturnType<typeof useStore.getState>['hiddenShows']) ?? [],
+    theme: (data.theme as 'dark' | 'light') ?? 'dark',
   });
 }
 

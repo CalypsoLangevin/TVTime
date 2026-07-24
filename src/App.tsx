@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './lib/auth';
+import { useStore } from './store';
 import { Navbar } from './components/Navbar';
 import { Login } from './pages/Login';
 import { Discover } from './pages/Discover';
@@ -14,6 +16,15 @@ import { Import } from './pages/Import';
 
 function AppShell() {
   const { token, loading } = useAuth();
+  const theme = useStore((s) => s.theme);
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  }, [theme]);
 
   if (loading) {
     return (

@@ -33,6 +33,9 @@ interface State {
   hiddenShows: number[];
   hideFromContinueWatching: (id: number) => void;
   unhideFromContinueWatching: (id: number) => void;
+
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
 }
 
 export const useStore = create<State>()(
@@ -43,6 +46,7 @@ export const useStore = create<State>()(
       watchlist: [],
       favorites: [],
       hiddenShows: [],
+      theme: 'dark' as const,
 
       logMovie: (movie, watchedAt?: string) =>
         set((s) => {
@@ -216,6 +220,8 @@ export const useStore = create<State>()(
 
       unhideFromContinueWatching: (id) =>
         set((s) => ({ hiddenShows: s.hiddenShows.filter((h) => h !== id) })),
+
+      setTheme: (theme) => set({ theme }),
     }),
     { name: 'queued-store' }
   )

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Tv, Film, Bookmark, BarChart3, Search, Upload, LogOut, Cloud, CloudOff, Loader } from 'lucide-react';
+import { Tv, Film, Bookmark, BarChart3, Search, Upload, LogOut, Cloud, CloudOff, Loader, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { useStore } from '../store';
 
 const links = [
   { to: '/', label: 'Discover', icon: Search },
@@ -45,6 +46,8 @@ function SyncIndicator() {
 export function Navbar() {
   const { pathname } = useLocation();
   const { logout } = useAuth();
+  const theme = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
   const isActive = (to: string) => to === '/' ? pathname === '/' : pathname.startsWith(to);
 
   return (
@@ -71,6 +74,13 @@ export function Navbar() {
           ))}
           <div className="flex-1" />
           <SyncIndicator />
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
           {desktopExtra.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
@@ -110,6 +120,13 @@ export function Navbar() {
               {label}
             </Link>
           ))}
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-medium text-zinc-500 transition-colors"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
         </div>
       </nav>
     </>
