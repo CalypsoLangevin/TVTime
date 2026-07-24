@@ -28,7 +28,7 @@ function AppShell() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -37,7 +37,7 @@ function AppShell() {
   if (!token) return <Login />;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white pb-16 sm:pb-0">
+    <div className="min-h-screen pb-16 sm:pb-0">
       <Navbar />
       <Routes>
         <Route path="/" element={<Discover />} />
