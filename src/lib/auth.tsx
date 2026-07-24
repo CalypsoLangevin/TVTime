@@ -130,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     clearToken();
     clearRepo();
     setToken(null);
@@ -163,10 +164,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // Sync to repo on every store change
+  // Sync to repo on every store change — guard against firing after logout
   useEffect(() => {
     if (!token || !repo) return;
-    const unsub = useStore.subscribe(() => scheduleSync(token, repo));
+    const unsub = useStore.subscribe(() => {
+      // Re-read from storage: if cleared (logout), skip sync
+      if (!loadToken() || !loadRepo()) return;
+      scheduleSync(token, repo);
+    });
     return unsub;
   }, [token, repo, scheduleSync]);
 
