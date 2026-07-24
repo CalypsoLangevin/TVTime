@@ -1,5 +1,5 @@
 const TOKEN_KEY = 'github-pat';
-const REPO_KEY = 'github-repo'; // format: "owner/repo"
+const REPO_KEY = 'github-repo';
 const FILE_PATH = 'queued-data.json';
 
 export function saveToken(token: string) { localStorage.setItem(TOKEN_KEY, token); }
@@ -11,7 +11,7 @@ export function loadRepo(): string | null { return localStorage.getItem(REPO_KEY
 export function clearRepo() { localStorage.removeItem(REPO_KEY); }
 
 async function ghFetch(token: string, path: string, options: RequestInit = {}) {
-  const res = await fetch(`https://api.github.com${path}`, {
+  return fetch(`https://api.github.com${path}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -20,13 +20,11 @@ async function ghFetch(token: string, path: string, options: RequestInit = {}) {
       ...(options.headers ?? {}),
     },
   });
-  return res;
 }
 
 export async function validateToken(token: string): Promise<boolean> {
   try {
-    const res = await ghFetch(token, '/user');
-    return res.ok;
+    return (await ghFetch(token, '/user')).ok;
   } catch {
     return false;
   }
@@ -34,51 +32,65 @@ export async function validateToken(token: string): Promise<boolean> {
 
 export async function validateRepo(token: string, repo: string): Promise<boolean> {
   try {
-    const res = await ghFetch(token, `/repos/${repo}`);
-    return res.ok;
+    return (await ghFetch(token, `/repos/${repo}`)).ok;
   } catch {
     return false;
   }
+}
+
+async function getCurrentSha(token: string, repo: string): Promise<string | null> {
+  const res = await ghFetch(token, `/repos/${repo}/contents/${FILE_PATH}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitHub ${res.status}`);
+  return ((await res.json()) as { sha: string }).sha;
 }
 
 export async function loadFromRepo(token: string, repo: string): Promise<Record<string, unknown> | null> {
   const res = await ghFetch(token, `/repos/${repo}/contents/${FILE_PATH}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GitHub ${res.status}`);
-  const data = await res.json();
-  // Content is base64-encoded
+  const data = await res.json() as { content: string };
   const content = atob(data.content.replace(/\n/g, ''));
-  if (!content || content === '{}') return null;
+  if (!content || content.trim() === '{}') return null;
   return JSON.parse(content);
 }
 
+// Serialize all saves — never run two concurrently (prevents SHA conflicts)
+let saveChain: Promise<void> = Promise.resolve();
+
 export async function saveToRepo(token: string, repo: string, state: unknown): Promise<void> {
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+  // Chain onto the previous save so they run one at a time
+  saveChain = saveChain.then(() => doSaveOnce(token, repo, state));
+  return saveChain;
+}
 
-  // Get current SHA (needed for updates)
-  const getRes = await ghFetch(token, `/repos/${repo}/contents/${FILE_PATH}`);
-  let sha: string | undefined;
-  if (getRes.ok) {
-    const existing = await getRes.json();
-    sha = existing.sha;
-  } else if (getRes.status !== 404) {
-    throw new Error(`GitHub ${getRes.status}`);
-  }
+async function doSaveOnce(token: string, repo: string, state: unknown): Promise<void> {
+  // Pretty-print so the file is readable on GitHub
+  const json = JSON.stringify(state, null, 2);
+  const content = btoa(unescape(encodeURIComponent(json)));
 
-  const body: Record<string, unknown> = {
-    message: 'Update Queued data',
-    content,
-  };
-  if (sha) body.sha = sha;
+  // Retry once on 409 (stale SHA — can happen when saves race)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const sha = await getCurrentSha(token, repo);
 
-  const putRes = await ghFetch(token, `/repos/${repo}/contents/${FILE_PATH}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+    const body: Record<string, unknown> = { message: 'Update Queued data', content };
+    if (sha) body.sha = sha;
 
-  if (!putRes.ok) {
-    const err = await putRes.json().catch(() => ({}));
-    throw new Error(`GitHub ${putRes.status}: ${(err as { message?: string }).message ?? ''}`);
+    const res = await ghFetch(token, `/repos/${repo}/contents/${FILE_PATH}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) return;
+
+    if (res.status === 409 && attempt === 0) {
+      // Stale SHA — refetch and retry
+      console.warn('[sync] 409 conflict, retrying with fresh SHA…');
+      continue;
+    }
+
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`GitHub ${res.status}: ${(err as { message?: string }).message ?? ''}`);
   }
 }
