@@ -49,10 +49,25 @@ export async function loadFromRepo(token: string, repo: string): Promise<Record<
   const res = await ghFetch(token, `/repos/${repo}/contents/${FILE_PATH}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GitHub ${res.status}`);
-  const data = await res.json() as { content: string };
-  const content = atob(data.content.replace(/\n/g, ''));
-  if (!content || content.trim() === '{}') return null;
-  return JSON.parse(content);
+  const meta = await res.json() as { content: string; download_url: string; size: number };
+
+  let json: string;
+
+  // GitHub Contents API returns empty content for files >1MB — fetch raw instead
+  if (meta.content && meta.content.trim()) {
+    json = atob(meta.content.replace(/\n/g, ''));
+  } else if (meta.download_url) {
+    const raw = await fetch(meta.download_url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!raw.ok) throw new Error(`GitHub raw fetch ${raw.status}`);
+    json = await raw.text();
+  } else {
+    return null;
+  }
+
+  if (!json || json.trim() === '{}') return null;
+  return JSON.parse(json);
 }
 
 // Serialize all saves — never run two concurrently (prevents SHA conflicts)
@@ -65,7 +80,7 @@ export async function saveToRepo(token: string, repo: string, state: unknown): P
 }
 
 async function doSaveOnce(token: string, repo: string, state: unknown): Promise<void> {
-  const json = JSON.stringify(state, null, 2);
+  const json = JSON.stringify(state);
 
   // Skip if nothing changed since last successful save
   if (json === lastSavedJson) return;
