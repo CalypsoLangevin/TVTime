@@ -75,10 +75,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSave = useCallback(async (tok: string, rep: string) => {
+    const snapshot = currentStoreSnapshot();
+    // Never overwrite GitHub with empty data — guard against any code path
+    if (isEmptyState(snapshot)) return;
     setSyncStatus('saving');
     try {
       console.log('[sync] saving to repo…');
-      await saveToRepo(tok, rep, currentStoreSnapshot());
+      await saveToRepo(tok, rep, snapshot);
       console.log('[sync] saved ok');
       setSyncStatus('saved');
     } catch (e) {
