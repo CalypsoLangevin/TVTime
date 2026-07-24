@@ -49,21 +49,20 @@ export async function loadFromRepo(token: string, repo: string): Promise<Record<
   const res = await ghFetch(token, `/repos/${repo}/contents/${FILE_PATH}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GitHub ${res.status}`);
-  const meta = await res.json() as { content: string; download_url: string; size: number };
+  const meta = await res.json() as { content: string; sha: string; size: number };
 
   let json: string;
 
-  // GitHub Contents API returns empty content for files >1MB — fetch raw instead
   if (meta.content && meta.content.trim()) {
+    // File ≤1MB: content returned inline as base64
     json = atob(meta.content.replace(/\n/g, ''));
-  } else if (meta.download_url) {
-    const raw = await fetch(meta.download_url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!raw.ok) throw new Error(`GitHub raw fetch ${raw.status}`);
-    json = await raw.text();
   } else {
-    return null;
+    // File >1MB: Git Contents API truncates content — use Blobs API with raw media type
+    const blobRes = await ghFetch(token, `/repos/${repo}/git/blobs/${meta.sha}`, {
+      headers: { Accept: 'application/vnd.github.raw' },
+    });
+    if (!blobRes.ok) throw new Error(`GitHub blob ${blobRes.status}`);
+    json = await blobRes.text();
   }
 
   if (!json || json.trim() === '{}') return null;
