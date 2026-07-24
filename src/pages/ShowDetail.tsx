@@ -23,18 +23,22 @@ interface EpisodeRowProps {
 
 function EpisodeRow({ ep, seasonNumber, watched, watchedAt, rewatchDates, onLog, onUnlog, onRewatch }: EpisodeRowProps) {
   const [mode, setMode] = useState<'idle' | 'log' | 'rewatch'>('idle');
-  const [date, setDate] = useState(todayStr());
+  const airDate = ep.air_date?.slice(0, 10) ?? todayStr();
+  const [date, setDate] = useState(airDate);
+
+  const openMode = (m: 'log' | 'rewatch') => {
+    setDate(airDate);
+    setMode(mode === m ? 'idle' : m);
+  };
 
   const confirmLog = () => {
     onLog(seasonNumber, ep.episode_number, new Date(date).toISOString());
     setMode('idle');
-    setDate(todayStr());
   };
 
   const confirmRewatch = () => {
     onRewatch(seasonNumber, ep.episode_number, new Date(date).toISOString());
     setMode('idle');
-    setDate(todayStr());
   };
 
   const totalWatches = watched ? 1 + rewatchDates.length : 0;
@@ -54,7 +58,7 @@ function EpisodeRow({ ep, seasonNumber, watched, watchedAt, rewatchDates, onLog,
         )}
         {watched && (
           <button
-            onClick={() => setMode(mode === 'rewatch' ? 'idle' : 'rewatch')}
+            onClick={() => openMode('rewatch')}
             className="p-1.5 rounded-full transition shrink-0 bg-zinc-700 text-zinc-400 hover:text-brand"
             title="Log rewatch"
           >
@@ -62,7 +66,7 @@ function EpisodeRow({ ep, seasonNumber, watched, watchedAt, rewatchDates, onLog,
           </button>
         )}
         <button
-          onClick={() => watched ? onUnlog(seasonNumber, ep.episode_number) : setMode(mode === 'log' ? 'idle' : 'log')}
+          onClick={() => watched ? onUnlog(seasonNumber, ep.episode_number) : openMode('log')}
           className={`p-1.5 rounded-full transition shrink-0 ${
             watched ? 'bg-brand text-black' : 'bg-zinc-700 text-zinc-400 hover:text-white'
           }`}
